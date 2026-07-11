@@ -1,0 +1,134 @@
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import { ProtectedRoute } from '../components/auth/ProtectedRoute'
+import { activities, user } from '../test/fixtures'
+import { renderWithProviders } from '../test/test-utils'
+import { Activities } from './Activities'
+import { ActivityDetails } from './ActivityDetails'
+import { Booking } from './Booking'
+import { Compare } from './Compare'
+
+describe('catalogue, comparison, and booking pages', () => {
+  it('renders activities from platform data and filters by activity type', async () => {
+    const tester = userEvent.setup()
+
+    renderWithProviders(<Activities />)
+
+    expect(screen.getByText(/showing 3 of 3 activities/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /paragliding over fewa lake/i })).toBeInTheDocument()
+
+    await tester.selectOptions(screen.getByLabelText(/activity type/i), 'Mountain Biking')
+
+    expect(screen.getByRole('heading', { name: /nagarkot mountain biking/i })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /mardi himal helicopter tour/i })).not.toBeInTheDocument()
+  })
+
+  it('shows a clear API error instead of silently falling back to local data', () => {
+    const refreshCatalog = vi.fn()
+
+    renderWithProviders(<Activities />, {
+      platform: {
+        activities: [],
+        catalogError: 'Could not reach the booking API.',
+        refreshCatalog,
+      },
+    })
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/could not reach the booking api/i)
+    expect(screen.queryByText(/paragliding over fewa lake/i)).not.toBeInTheDocument()
+  })
+
+  it('renders activity details, comparison data, and an empty review state', () => {
+    renderWithProviders(null, {
+      initialEntries: ['/activities/nagarkot-mountain-biking'],
+      platform: {
+        getReviewsByActivityId: vi.fn(() => []),
+        reviews: [],
+      },
+      routes: [{ element: <ActivityDetails />, path: '/activities/:id' }],
+    })
+
+    expect(screen.getByRole('heading', { name: /nagarkot mountain biking/i })).toBeInTheDocument()
+    expect(screen.getByText(/choose by value, not just price/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /no reviews yet/i })).toBeInTheDocument()
+  })
+
+  it('compares selected activities side by side and clears comparison', async () => {
+    const tester = userEvent.setup()
+    const clearCompare = vi.fn()
+
+    renderWithProviders(<Compare />, {
+      experience: {
+        clearCompare,
+        compareIds: ['paragliding-pokhara', 'nagarkot-mountain-biking'],
+      },
+    })
+
+    expect(screen.getByRole('table')).toHaveTextContent(/starting price/i)
+    expect(screen.getByRole('table')).toHaveTextContent(/paragliding over fewa lake/i)
+
+    await tester.click(screen.getByRole('button', { name: /clear comparison/i }))
+    expect(clearCompare).toHaveBeenCalled()
+  })
+
+  it('requires login before entering the booking route', () => {
+    renderWithProviders(null, {
+      initialEntries: ['/booking/paragliding-pokhara'],
+      routes: [
+        {
+          element: (
+            <ProtectedRoute allowedRoles={['user', 'admin']}>
+              <Booking />
+            </ProtectedRoute>
+          ),
+          path: '/booking/:id',
+        },
+        { element: <h1>Login page</h1>, path: '/login' },
+      ],
+    })
+
+    expect(screen.getByRole('heading', { name: /login page/i })).toBeInTheDocument()
+  })
+
+  it('validates booking steps and saves a completed booking', async () => {
+    const tester = userEvent.setup()
+    const addBooking = vi.fn(async (booking) => ({
+      ...booking,
+      bookingReference: 'SAB-TEST-999',
+      id: 'booking-new',
+      status: 'Awaiting payment',
+    }))
+
+    renderWithProviders(null, {
+      auth: { addBooking, currentUser: user, userBookings: [] },
+      initialEntries: ['/booking/paragliding-pokhara'],
+      routes: [
+        { element: <Booking />, path: '/booking/:id' },
+        { element: <h1>Receipt ready</h1>, path: '/booking-success' },
+      ],
+    })
+
+    await tester.click(screen.getByRole('button', { name: /continue/i }))
+    await tester.click(screen.getByRole('button', { name: /continue/i }))
+    await tester.type(screen.getByLabelText(/emergency contact name/i), 'Backup Contact')
+    await tester.type(screen.getByLabelText(/emergency phone/i), '9811111111')
+    await tester.click(screen.getByRole('button', { name: /continue/i }))
+    await tester.click(screen.getByRole('button', { name: /continue/i }))
+    await tester.click(screen.getByRole('button', { name: /confirm booking/i }))
+
+    expect(addBooking).not.toHaveBeenCalled()
+
+    await tester.click(screen.getByLabelText(/safety advice is guidance only/i))
+    await tester.click(screen.getByRole('button', { name: /confirm booking/i }))
+
+    await waitFor(() => expect(addBooking).toHaveBeenCalled())
+    expect(await screen.findByRole('heading', { name: /receipt ready/i })).toBeInTheDocument()
+    expect(addBooking.mock.calls[0][0]).toMatchObject({
+      activityId: activities[0].id,
+      emergencyName: 'Backup Contact',
+      emergencyPhone: '9811111111',
+      people: 2,
+    })
+  })
+})
