@@ -27,11 +27,12 @@ import { Link } from 'react-router-dom'
 import { Badge, RiskBadge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
+import { getAnalytics, getDashboardStats } from '../api/adminApi'
 import { useAuth } from '../context/useAuth'
 import { useExperience } from '../context/useExperience'
 import { usePlatform } from '../context/usePlatform'
+import { getSupportMessages, updateSupportMessageStatus } from '../api/supportApi'
 import { activityTypes as defaultActivityTypes, riskLevels } from '../data/activities'
-import { bookings as seedBookings } from '../data/bookings'
 import { average, formatCurrency } from '../utils/formatters'
 
 const bookingStatuses = [
@@ -44,7 +45,6 @@ const bookingStatuses = [
   'Account removed',
 ]
 const supportStatuses = ['New', 'In review', 'Resolved']
-const SUPPORT_MESSAGES_KEY = 'smartAdventureSupportMessages'
 
 const pageCopy = {
   dashboard: {
@@ -138,19 +138,6 @@ const emptyOperatorForm = {
   valueRating: 4.5,
 }
 
-function readJson(key, fallback) {
-  try {
-    const value = localStorage.getItem(key)
-    return value ? JSON.parse(value) : fallback
-  } catch {
-    return fallback
-  }
-}
-
-function saveJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value))
-}
-
 function asActivityForm(activity) {
   return {
     name: activity.name,
@@ -203,6 +190,7 @@ export function AdminDashboard({ section = 'dashboard' }) {
     deleteOperator,
     deleteReview,
     reviews,
+    operators: platformOperators,
     saveSettings,
     settings: platformSettings,
     updateActivity,
@@ -216,43 +204,107 @@ export function AdminDashboard({ section = 'dashboard' }) {
   const [reviewForm, setReviewForm] = useState(emptyReviewForm)
   const [operatorDrafts, setOperatorDrafts] = useState({})
   const [settings, setSettings] = useState(platformSettings)
-  const [supportMessages, setSupportMessages] = useState(() =>
-    readJson(SUPPORT_MESSAGES_KEY, []).map((message) => ({ status: 'New', ...message })),
-  )
+  const [supportMessages, setSupportMessages] = useState([])
+  const [adminStats, setAdminStats] = useState(null)
+  const [adminAnalytics, setAdminAnalytics] = useState(null)
   const [notice, setNotice] = useState('')
 
   useEffect(() => {
     setSettings(platformSettings)
   }, [platformSettings])
 
+  useEffect(() => {
+    let ignore = false
+    async function loadAdminData() {
+      try {
+        const [messages, stats, analytics] = await Promise.all([
+          getSupportMessages(),
+          getDashboardStats(),
+          getAnalytics(),
+        ])
+        if (!ignore) {
+          setSupportMessages(messages)
+          setAdminStats(stats)
+          setAdminAnalytics(analytics)
+        }
+      } catch {
+        if (!ignore) {
+          setSupportMessages([])
+          setAdminStats(null)
+          setAdminAnalytics(null)
+        }
+      }
+    }
+
+    if (currentUser?.role === 'admin') {
+      loadAdminData()
+    }
+
+    return () => {
+      ignore = true
+    }
+  }, [currentUser?.role])
+
   const allBookings = useMemo(
     () =>
-      [...bookingRecords, ...seedBookings].map((booking) => ({
+      bookingRecords.map((booking) => ({
         ...booking,
         status: bookingStatusUpdates[booking.id] ?? booking.status,
       })),
     [bookingRecords, bookingStatusUpdates],
   )
 
-  const operators = useMemo(
-    () =>
-      activities.flatMap((activity) =>
-        activity.operators.map((operator) => ({
+  const operators = useMemo(() => {
+    const directory = new Map(
+      platformOperators.map((operator) => [
+        operator.id,
+        {
           ...operator,
-          activityId: activity.id,
-          activityName: activity.name,
-          activityType: activity.type,
+          activityLinks: [],
+          prices: [],
+        },
+      ]),
+    )
+
+    activities.forEach((activity) => {
+      activity.operators.forEach((operator) => {
+        const current = directory.get(operator.id) ?? {
+          ...operator,
+          activityLinks: [],
+          prices: [],
+        }
+
+        current.activityLinks.push({
+          id: activity.id,
           location: activity.location,
-          responseRate: operator.responseRate ?? 92 + (operator.name.length % 7),
+          name: activity.name,
           riskLevel: activity.riskLevel,
-          status: operator.status ?? 'active',
-        })),
-      ),
-    [activities],
-  )
+          type: activity.type,
+        })
+        if (operator.price) current.prices.push(Number(operator.price))
+        directory.set(operator.id, { ...current, ...operator })
+      })
+    })
+
+    return [...directory.values()].map((operator) => {
+      const firstActivity = operator.activityLinks[0]
+      return {
+        ...operator,
+        activityId: firstActivity?.id ?? '',
+        activityName: operator.activityLinks.map((activity) => activity.name).join(', ') || 'Unassigned',
+        activityType: firstActivity?.type ?? 'Not linked',
+        location: operator.location || firstActivity?.location || 'Nepal',
+        price: operator.prices.length ? Math.min(...operator.prices) : Number(operator.price ?? 0),
+        responseRate: operator.responseRate ?? 92 + (operator.name.length % 7),
+        riskLevel: firstActivity?.riskLevel ?? 'Not linked',
+        status: operator.status ?? 'active',
+      }
+    })
+  }, [activities, platformOperators])
   const totalRevenue = allBookings
     .filter((booking) => ['Confirmed', 'Completed'].includes(booking.status))
     .reduce((total, booking) => total + Number(booking.total || 0), 0)
+  const dashboardRevenue = adminStats?.revenue ?? totalRevenue
   const averageRating = average(activities.map((activity) => activity.rating))
   const averageSafetyRating = average(operators.map((operator) => operator.safetyRating))
   const typeOptions = useMemo(
@@ -276,9 +328,14 @@ export function AdminDashboard({ section = 'dashboard' }) {
     setShowActivityForm(false)
   }
 
-  function handleAddActivity(event) {
+  async function handleAddActivity(event) {
     event.preventDefault()
-    addActivity(activityForm)
+    const result = await addActivity(activityForm)
+    if (!result.ok) {
+      setNotice(result.message)
+      showToast(result.message, 'info')
+      return
+    }
     resetActivityForm()
     setNotice('Activity added successfully.')
     showToast('Activity added successfully.')
@@ -289,15 +346,20 @@ export function AdminDashboard({ section = 'dashboard' }) {
     setEditForm(asActivityForm(activity))
   }
 
-  function handleSaveActivity(event) {
+  async function handleSaveActivity(event) {
     event.preventDefault()
-    updateActivity(editingActivityId, editForm)
+    const result = await updateActivity(editingActivityId, editForm)
+    if (!result.ok) {
+      setNotice(result.message)
+      showToast(result.message, 'info')
+      return
+    }
     setEditingActivityId('')
     setNotice('Activity updated successfully.')
     showToast('Activity updated successfully.')
   }
 
-  function handleDeleteActivity(activityId) {
+  async function handleDeleteActivity(activityId) {
     const relatedBookings = allBookings.filter((booking) => booking.activityId === activityId)
     if (relatedBookings.length) {
       const message = `This activity has ${relatedBookings.length} booking record${relatedBookings.length > 1 ? 's' : ''} and cannot be deleted.`
@@ -305,7 +367,12 @@ export function AdminDashboard({ section = 'dashboard' }) {
       return
     }
     if (!window.confirm('Delete this activity from the catalog?')) return
-    deleteActivity(activityId)
+    const result = await deleteActivity(activityId)
+    if (!result.ok) {
+      setNotice(result.message)
+      showToast(result.message, 'info')
+      return
+    }
     setNotice('Activity removed successfully.')
     showToast('Activity removed successfully.')
   }
@@ -314,7 +381,7 @@ export function AdminDashboard({ section = 'dashboard' }) {
     setReviewForm((current) => ({ ...current, [field]: value }))
   }
 
-  function handleAddReview(event) {
+  async function handleAddReview(event) {
     event.preventDefault()
 
     if (!selectedReviewActivity) {
@@ -326,12 +393,17 @@ export function AdminDashboard({ section = 'dashboard' }) {
       selectedReviewActivity.operators.find(
         (item) => item.id === reviewForm.operatorId,
       ) ?? selectedReviewActivity.operators[0]
-    addReview({
+    const result = await addReview({
       ...reviewForm,
       activityId: reviewForm.activityId || selectedReviewActivity.id,
       operator: operator?.name || 'Verified operator',
       operatorId: operator?.id ?? '',
     })
+    if (!result.ok) {
+      setNotice(result.message)
+      showToast(result.message, 'info')
+      return
+    }
     setReviewForm({ ...emptyReviewForm, activityId: activities[0]?.id ?? '' })
     setNotice('Review added successfully.')
     showToast('Review added successfully.')
@@ -345,7 +417,7 @@ export function AdminDashboard({ section = 'dashboard' }) {
     return operatorDrafts[draftKey(activityId, operator.id)] ?? operator.price
   }
 
-  function handleSaveOperatorPrice(activityId, operatorId) {
+  async function handleSaveOperatorPrice(activityId, operatorId) {
     const activity = activities.find((item) => item.id === activityId)
     const operator = activity?.operators.find((item) => item.id === operatorId)
     const price = operatorDrafts[draftKey(activityId, operatorId)] ?? operator?.price
@@ -355,13 +427,23 @@ export function AdminDashboard({ section = 'dashboard' }) {
       return
     }
 
-    updateOperatorPrice(activityId, operatorId, price)
+    const result = await updateOperatorPrice(activityId, operatorId, price)
+    if (!result.ok) {
+      setNotice(result.message)
+      showToast(result.message, 'info')
+      return
+    }
     setNotice('Operator price updated successfully.')
     showToast('Operator price updated successfully.')
   }
 
-  function handleStatusChange(bookingId, status) {
-    updateBookingStatus(bookingId, status)
+  async function handleStatusChange(bookingId, status) {
+    const result = await updateBookingStatus(bookingId, status)
+    if (!result.ok) {
+      setNotice(result.message)
+      showToast(result.message, 'info')
+      return
+    }
     setNotice('Booking status updated successfully.')
     showToast('Booking status updated successfully.')
   }
@@ -377,12 +459,18 @@ export function AdminDashboard({ section = 'dashboard' }) {
     showToast('Settings saved successfully.')
   }
 
-  function handleSupportStatus(messageId, status) {
-    const nextMessages = supportMessages.map((message) =>
-      message.id === messageId ? { ...message, status } : message,
-    )
-    setSupportMessages(nextMessages)
-    saveJson(SUPPORT_MESSAGES_KEY, nextMessages)
+  async function handleSupportStatus(messageId, status) {
+    try {
+      const updatedMessage = await updateSupportMessageStatus(messageId, status)
+      setSupportMessages((current) =>
+        current.map((message) => (message.id === messageId ? updatedMessage : message)),
+      )
+    } catch {
+      const message = 'Could not update support message status.'
+      setNotice(message)
+      showToast(message, 'info')
+      return
+    }
     setNotice('Support message status updated.')
     showToast('Support message status updated.')
   }
@@ -397,9 +485,10 @@ export function AdminDashboard({ section = 'dashboard' }) {
           activities={activities}
           allBookings={allBookings}
           averageRating={averageRating}
+          adminStats={adminStats}
           operators={operators}
           reviews={reviews}
-          totalRevenue={totalRevenue}
+          totalRevenue={dashboardRevenue}
         />
       ) : null}
       {section === 'activities' ? (
@@ -476,11 +565,12 @@ export function AdminDashboard({ section = 'dashboard' }) {
       {section === 'analytics' ? (
         <AnalyticsSection
           activities={activities}
+          adminAnalytics={adminAnalytics}
           allBookings={allBookings}
           averageRating={averageRating}
           averageSafetyRating={averageSafetyRating}
           reviews={reviews}
-          totalRevenue={totalRevenue}
+          totalRevenue={dashboardRevenue}
         />
       ) : null}
       {section === 'settings' ? (
@@ -551,16 +641,24 @@ function MetricCard({ icon: Icon, label, value, detail }) {
   )
 }
 
-function DashboardSection({ activities, allBookings, averageRating, operators, reviews, totalRevenue }) {
+function DashboardSection({
+  activities,
+  adminStats,
+  allBookings,
+  averageRating,
+  operators,
+  reviews,
+  totalRevenue,
+}) {
   const recentBookings = allBookings.slice(0, 5)
   const highRiskActivities = activities.filter((activity) => activity.riskLevel === 'High')
 
   return (
     <div className="grid gap-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard detail="Active public experiences" icon={ClipboardList} label="Activities" value={activities.length} />
-        <MetricCard detail="Listed partner offers" icon={ShieldCheck} label="Operators" value={operators.length} />
-        <MetricCard detail="Across stored requests" icon={CalendarCheck} label="Bookings" value={allBookings.length} />
+        <MetricCard detail="Active public experiences" icon={ClipboardList} label="Activities" value={adminStats?.activities ?? activities.length} />
+        <MetricCard detail="Listed partner offers" icon={ShieldCheck} label="Operators" value={adminStats?.operators ?? operators.length} />
+        <MetricCard detail="Across stored requests" icon={CalendarCheck} label="Bookings" value={adminStats?.bookings ?? allBookings.length} />
         <MetricCard detail={`${averageRating.toFixed(1)}/5 average rating`} icon={DollarSign} label="Revenue" value={formatCurrency(totalRevenue)} />
       </div>
 
@@ -743,8 +841,9 @@ function OperatorsSection({
   const [editTarget, setEditTarget] = useState(null)
   const [editForm, setEditForm] = useState(emptyOperatorForm)
   const [deleteTarget, setDeleteTarget] = useState(null)
-  const lowestPrice = operators.length
-    ? formatCurrency(Math.min(...operators.map((operator) => operator.price)))
+  const listedPrices = operators.map((operator) => operator.price).filter((price) => Number(price) > 0)
+  const lowestPrice = listedPrices.length
+    ? formatCurrency(Math.min(...listedPrices))
     : 'No prices yet'
 
   function updateForm(field, value) {
@@ -755,9 +854,9 @@ function OperatorsSection({
     setEditForm((current) => ({ ...current, [field]: value }))
   }
 
-  function handleAdd(event) {
+  async function handleAdd(event) {
     event.preventDefault()
-    const result = addOperator(form.activityId, form)
+    const result = await addOperator(form.activityId, form)
     if (!result.ok) {
       showToast(result.message, 'info')
       return
@@ -774,16 +873,16 @@ function OperatorsSection({
       cancellation: operator.cancellation,
       license: operator.license,
       name: operator.name,
-      price: operator.price,
+      price: operator.price || 1,
       responseRate: operator.responseRate,
       safetyRating: operator.safetyRating,
       valueRating: operator.valueRating,
     })
   }
 
-  function handleEdit(event) {
+  async function handleEdit(event) {
     event.preventDefault()
-    const result = updateOperator(editTarget.activityId, editTarget.id, editForm)
+    const result = await updateOperator(editTarget.activityId, editTarget.id, editForm)
     if (!result.ok) {
       showToast(result.message, 'info')
       return
@@ -792,8 +891,8 @@ function OperatorsSection({
     showToast('Operator updated successfully.')
   }
 
-  function handleStatus(operator, status) {
-    const result = updateOperator(operator.activityId, operator.id, { status })
+  async function handleStatus(operator, status) {
+    const result = await updateOperator(operator.activityId, operator.id, { status })
     showToast(
       result.ok
         ? status === 'active'
@@ -804,8 +903,8 @@ function OperatorsSection({
     )
   }
 
-  function handleDelete() {
-    const result = deleteOperator(deleteTarget.activityId, deleteTarget.id)
+  async function handleDelete() {
+    const result = await deleteOperator(deleteTarget.activityId, deleteTarget.id)
     if (!result.ok) {
       showToast(result.message, 'info')
       return
@@ -872,11 +971,13 @@ function OperatorsSection({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {operators.map((operator) => (
-                <tr className="hover:bg-slate-50" key={`${operator.activityId}-${operator.id}`}>
+                <tr className="hover:bg-slate-50" key={operator.id}>
                   <td className="px-5 py-4 font-bold text-slate-950">{operator.name}</td>
                   <td className="px-5 py-4 text-slate-600">{operator.license}</td>
                   <td className="px-5 py-4 text-slate-600">{operator.location}</td>
-                  <td className="px-5 py-4 font-semibold text-slate-900">{formatCurrency(operator.price)}</td>
+                  <td className="px-5 py-4 font-semibold text-slate-900">
+                    {operator.price ? formatCurrency(operator.price) : 'Not linked'}
+                  </td>
                   <td className="px-5 py-4 font-semibold text-slate-900">{operator.safetyRating}/5</td>
                   <td className="px-5 py-4 font-semibold text-slate-900">{operator.responseRate}%</td>
                   <td className="px-5 py-4 text-slate-600">{operator.activityName}</td>
@@ -1435,9 +1536,14 @@ function ReviewsSection({
                 <td className="px-5 py-4">
                   <Button
                     icon={Trash2}
-                    onClick={() => {
+                    onClick={async () => {
                       if (!window.confirm('Delete this review?')) return
-                      deleteReview(review.id)
+                      const result = await deleteReview(review.id)
+                      if (!result.ok) {
+                        setNotice(result.message)
+                        showToast(result.message, 'info')
+                        return
+                      }
                       setNotice('Review removed successfully.')
                       showToast('Review removed successfully.')
                     }}
@@ -1484,8 +1590,8 @@ function UsersSection({
     return allBookings.filter((booking) => booking.userId === userId).length
   }
 
-  function handleStatus(user, status) {
-    const result = updateUserStatus(user.id, status)
+  async function handleStatus(user, status) {
+    const result = await updateUserStatus(user.id, status)
     if (!result.ok) {
       showToast(result.message, 'info')
       return
@@ -1494,10 +1600,10 @@ function UsersSection({
     showToast(status === 'active' ? 'User account activated.' : 'User account suspended.')
   }
 
-  function handleEditSubmit(event) {
+  async function handleEditSubmit(event) {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    const result = updateUserByAdmin(editUser.id, {
+    const result = await updateUserByAdmin(editUser.id, {
       fullName: formData.get('fullName'),
       phone: formData.get('phone'),
       role: formData.get('role'),
@@ -1513,8 +1619,8 @@ function UsersSection({
     showToast('User account updated.')
   }
 
-  function handleDeleteConfirm() {
-    const result = deleteUser(deleteTarget.id)
+  async function handleDeleteConfirm() {
+    const result = await deleteUser(deleteTarget.id)
     if (!result.ok) {
       showToast(result.message, 'info')
       return
@@ -2014,6 +2120,7 @@ function formatDate(value) {
 }
 
 function AnalyticsSection({
+  adminAnalytics,
   activities,
   allBookings,
   averageRating,
@@ -2021,10 +2128,16 @@ function AnalyticsSection({
   reviews,
   totalRevenue,
 }) {
-  const statusCounts = bookingStatuses.map((status) => ({
-    status,
-    count: allBookings.filter((booking) => booking.status === status).length,
+  const apiStatusCounts = adminAnalytics?.bookingsByStatus?.map((item) => ({
+    count: item.count,
+    status: displayBookingStatus(item._id),
   }))
+  const statusCounts = apiStatusCounts?.length
+    ? apiStatusCounts
+    : bookingStatuses.map((status) => ({
+        status,
+        count: allBookings.filter((booking) => booking.status === status).length,
+      }))
   const maxStatusCount = Math.max(1, ...statusCounts.map((item) => item.count))
   const typeCounts = [...new Set(activities.map((activity) => activity.type))].map((type) => ({
     type,
@@ -2061,6 +2174,17 @@ function AnalyticsSection({
       </div>
     </div>
   )
+}
+
+function displayBookingStatus(status = 'pending') {
+  const map = {
+    awaiting_payment: 'Awaiting payment',
+    cancelled: 'Cancelled',
+    completed: 'Completed',
+    confirmed: 'Confirmed',
+    pending: 'Pending confirmation',
+  }
+  return map[status] ?? status
 }
 
 function ProgressRow({ label, max, value }) {

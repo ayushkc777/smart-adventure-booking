@@ -16,6 +16,7 @@ export function Login() {
   const [touched, setTouched] = useState({})
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   if (currentUser) {
     const fallbackPath = currentUser.role === 'admin' ? '/admin' : '/user/dashboard'
@@ -47,13 +48,15 @@ export function Login() {
   const validationErrors = fieldErrors()
   const isFormValid = !validationErrors.email && !validationErrors.password
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     setTouched({ email: true, password: true })
 
-    if (!isFormValid) return
+    if (!isFormValid || submitting) return
 
-    const result = login(form.email, form.password)
+    setSubmitting(true)
+    const result = await login(form.email, form.password)
+    setSubmitting(false)
 
     if (!result.ok) {
       setError(result.message)
@@ -150,8 +153,8 @@ export function Login() {
               </p>
             ) : null}
 
-            <Button disabled={!isFormValid} icon={LogIn} size="lg" type="submit" variant="accent">
-              Sign in
+            <Button disabled={!isFormValid || submitting} icon={LogIn} size="lg" type="submit" variant="accent">
+              {submitting ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
 

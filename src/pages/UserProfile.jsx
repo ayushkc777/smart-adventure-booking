@@ -12,7 +12,7 @@ const languages = ['English', 'Nepali', 'Hindi', 'Chinese', 'French', 'German', 
 const MAX_PROFILE_PHOTO_BYTES = 1024 * 1024
 
 export function UserProfile() {
-  const { changePassword, currentUser, updateProfile } = useAuth()
+  const { changePassword, currentUser, updateProfile, uploadProfilePhoto } = useAuth()
   const { showToast } = useExperience()
   const [form, setForm] = useState({
     emergencyContact: currentUser.emergencyContact ?? '',
@@ -31,6 +31,9 @@ export function UserProfile() {
   const [passwordTouched, setPasswordTouched] = useState({})
   const [profileMessage, setProfileMessage] = useState('')
   const [passwordMessage, setPasswordMessage] = useState('')
+  const [photoFile, setPhotoFile] = useState(null)
+  const [profileSubmitting, setProfileSubmitting] = useState(false)
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false)
   const [showPasswords, setShowPasswords] = useState({
     confirmPassword: false,
     currentPassword: false,
@@ -115,6 +118,7 @@ export function UserProfile() {
 
     const reader = new FileReader()
     reader.onload = () => {
+      setPhotoFile(file)
       updateField('profilePhoto', String(reader.result))
       showToast('Profile photo ready to save.', 'info')
     }
@@ -122,7 +126,7 @@ export function UserProfile() {
     reader.readAsDataURL(file)
   }
 
-  function handleProfileSubmit(event) {
+  async function handleProfileSubmit(event) {
     event.preventDefault()
     setProfileTouched({
       emergencyContact: true,
@@ -132,15 +136,33 @@ export function UserProfile() {
       preferredLanguage: true,
     })
 
-    if (!isProfileValid) return
+    if (!isProfileValid || profileSubmitting) return
 
-    const result = updateProfile(form)
+    setProfileSubmitting(true)
+    const profileResult = await updateProfile(form)
+    if (!profileResult.ok) {
+      setProfileSubmitting(false)
+      setProfileMessage(profileResult.message)
+      showToast(profileResult.message, 'info')
+      return
+    }
+
+    let result = profileResult
+    if (photoFile) {
+      result = await uploadProfilePhoto(photoFile)
+      if (result.ok) {
+        setPhotoFile(null)
+        setForm((current) => ({ ...current, profilePhoto: result.user.profilePhoto ?? current.profilePhoto }))
+      }
+    }
+    setProfileSubmitting(false)
+
     const message = result.ok ? 'Profile updated successfully.' : result.message
     setProfileMessage(message)
     showToast(message, result.ok ? 'success' : 'info')
   }
 
-  function handlePasswordSubmit(event) {
+  async function handlePasswordSubmit(event) {
     event.preventDefault()
     setPasswordTouched({
       confirmPassword: true,
@@ -148,9 +170,11 @@ export function UserProfile() {
       newPassword: true,
     })
 
-    if (!isPasswordValid) return
+    if (!isPasswordValid || passwordSubmitting) return
 
-    const result = changePassword(passwordForm)
+    setPasswordSubmitting(true)
+    const result = await changePassword(passwordForm)
+    setPasswordSubmitting(false)
     if (!result.ok) {
       setPasswordMessage(result.message)
       showToast(result.message, 'info')
@@ -203,7 +227,10 @@ export function UserProfile() {
                 <Button
                   disabled={!form.profilePhoto}
                   icon={Trash2}
-                  onClick={() => updateField('profilePhoto', '')}
+                  onClick={() => {
+                    setPhotoFile(null)
+                    updateField('profilePhoto', '')
+                  }}
                   variant="secondary"
                 >
                   Remove photo
@@ -271,8 +298,8 @@ export function UserProfile() {
                   </p>
                 ) : null}
 
-                <Button disabled={!isPasswordValid} icon={Save} type="submit" variant="accent">
-                  Update password
+                <Button disabled={!isPasswordValid || passwordSubmitting} icon={Save} type="submit" variant="accent">
+                  {passwordSubmitting ? 'Updating...' : 'Update password'}
                 </Button>
               </form>
             </Card>
@@ -359,8 +386,8 @@ export function UserProfile() {
                 </p>
               ) : null}
 
-              <Button disabled={!isProfileValid} icon={Save} type="submit" variant="accent">
-                Save profile
+              <Button disabled={!isProfileValid || profileSubmitting} icon={Save} type="submit" variant="accent">
+                {profileSubmitting ? 'Saving...' : 'Save profile'}
               </Button>
             </form>
           </Card>

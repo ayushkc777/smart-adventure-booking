@@ -38,62 +38,62 @@ export function AppRoutes() {
     <Suspense fallback={<RouteLoading />}>
       <Routes>
         <Route element={<Layout />}>
-        <Route index element={<Home />} />
-        <Route element={<Activities />} path="activities" />
-        <Route element={<ActivityDetails />} path="activities/:id" />
-        <Route element={<Compare />} path="compare" />
-        <Route element={<OperatorProfile />} path="operators/:id" />
-        <Route
-          element={
-            <ProtectedRoute allowedRoles={['user']}>
-              <Booking />
-            </ProtectedRoute>
-          }
-          path="booking/:id"
-        />
-        <Route
-          element={
-            <ProtectedRoute allowedRoles={['user']}>
-              <BookingSuccess />
-            </ProtectedRoute>
-          }
-          path="booking-success"
-        />
-        <Route element={<Login />} path="login" />
-        <Route element={<Register />} path="register" />
-        <Route
-          element={
-            <ProtectedRoute allowedRoles={['user']}>
-              <UserDashboard />
-            </ProtectedRoute>
-          }
-          path="user/dashboard"
-        />
-        <Route
-          element={
-            <ProtectedRoute allowedRoles={['user']}>
-              <UserBookings />
-            </ProtectedRoute>
-          }
-          path="user/bookings"
-        />
-        <Route
-          element={
-            <ProtectedRoute allowedRoles={['user']}>
-              <UserProfile />
-            </ProtectedRoute>
-          }
-          path="user/profile"
-        />
-        <Route element={<About />} path="about" />
-        <Route element={<Safety />} path="safety" />
-        <Route element={<TravelGuide />} path="travel-guide" />
-        <Route element={<Contact />} path="contact" />
-        <Route element={<PrivacyPolicy />} path="privacy-policy" />
-        <Route element={<Terms />} path="terms" />
-        <Route element={<CancellationPolicy />} path="cancellation-policy" />
-        <Route element={<NotFound />} path="not-found" />
-        <Route element={<Navigate replace to="/not-found" />} path="*" />
+          <Route index element={<Home />} />
+          <Route element={<Activities />} path="activities" />
+          <Route element={<ActivityDetails />} path="activities/:id" />
+          <Route element={<Compare />} path="compare" />
+          <Route element={<OperatorProfile />} path="operators/:id" />
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={['user']}>
+                <Booking />
+              </ProtectedRoute>
+            }
+            path="booking/:id"
+          />
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={['user']}>
+                <BookingSuccess />
+              </ProtectedRoute>
+            }
+            path="booking-success"
+          />
+          <Route element={<Login />} path="login" />
+          <Route element={<Register />} path="register" />
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={['user']}>
+                <UserDashboard />
+              </ProtectedRoute>
+            }
+            path="user/dashboard"
+          />
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={['user']}>
+                <UserBookings />
+              </ProtectedRoute>
+            }
+            path="user/bookings"
+          />
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={['user']}>
+                <UserProfile />
+              </ProtectedRoute>
+            }
+            path="user/profile"
+          />
+          <Route element={<About />} path="about" />
+          <Route element={<Safety />} path="safety" />
+          <Route element={<TravelGuide />} path="travel-guide" />
+          <Route element={<Contact />} path="contact" />
+          <Route element={<PrivacyPolicy />} path="privacy-policy" />
+          <Route element={<Terms />} path="terms" />
+          <Route element={<CancellationPolicy />} path="cancellation-policy" />
+          <Route element={<NotFound />} path="not-found" />
+          <Route element={<Navigate replace to="/not-found" />} path="*" />
         </Route>
         <Route
           element={

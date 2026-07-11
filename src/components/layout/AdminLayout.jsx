@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { flushSync } from 'react-dom'
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Activity,
   BarChart3,
@@ -62,15 +61,14 @@ export function AdminLayout() {
   const [isOpen, setIsOpen] = useState(false)
   const { currentUser, logout } = useAuth()
   const { showToast } = useExperience()
-  const navigate = useNavigate()
   const location = useLocation()
   const title = titles[location.pathname] ?? 'Administration'
 
-  function handleLogout() {
+  async function handleLogout() {
     setIsOpen(false)
-    flushSync(() => logout())
+    await logout()
     showToast('Logged out successfully.')
-    navigate('/', { replace: true })
+    window.location.replace('/')
   }
 
   const sidebar = (

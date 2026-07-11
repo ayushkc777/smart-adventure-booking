@@ -30,7 +30,15 @@ const sortOptions = [
 export function Activities() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const { activities, activityTypes, locations, provinces } = usePlatform()
+  const {
+    activities,
+    activityTypes,
+    catalogError,
+    catalogLoading,
+    locations,
+    provinces,
+    refreshCatalog,
+  } = usePlatform()
   const { compareIds } = useExperience()
   const destinationOptions = [...new Set([...locations, ...provinces])]
   const filters = useMemo(
@@ -178,31 +186,57 @@ export function Activities() {
 
       <section className="bg-slate-50 py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-semibold text-slate-600">
-              Showing {filteredActivities.length} of {activities.length} activities
-            </p>
-            {compareIds.length ? (
-              <Link className="text-sm font-bold text-himalaya-800" to="/compare">
-                View comparison
-              </Link>
-            ) : null}
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {filteredActivities.map((activity) => (
-              <ActivityCard activity={activity} key={activity.id} />
-            ))}
-          </div>
-          {filteredActivities.length === 0 ? (
-            <Card className="mt-8 p-10 text-center">
-              <h2 className="text-2xl font-bold text-slate-950">No activities found</h2>
+          {catalogLoading ? (
+            <Card className="p-10 text-center">
+              <h2 className="text-2xl font-bold text-slate-950">Loading activities</h2>
               <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
-                Try widening your budget, changing the season, or removing one of the risk or
-                difficulty filters.
+                Fetching the latest activity catalogue from the booking API.
               </p>
-              <Button className="mt-6" onClick={() => setSearchParams({}, { replace: true })} variant="accent">
-                Clear filters
+            </Card>
+          ) : catalogError ? (
+            <Card className="p-10 text-center" role="alert">
+              <h2 className="text-2xl font-bold text-slate-950">Activity catalogue unavailable</h2>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                {catalogError}
+              </p>
+              <Button className="mt-6" onClick={refreshCatalog} variant="accent">
+                Try again
               </Button>
+            </Card>
+          ) : (
+            <>
+              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-semibold text-slate-600">
+                  Showing {filteredActivities.length} of {activities.length} activities
+                </p>
+                {compareIds.length ? (
+                  <Link className="text-sm font-bold text-himalaya-800" to="/compare">
+                    View comparison
+                  </Link>
+                ) : null}
+              </div>
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {filteredActivities.map((activity) => (
+                  <ActivityCard activity={activity} key={activity.id} />
+                ))}
+              </div>
+            </>
+          )}
+          {!catalogLoading && !catalogError && filteredActivities.length === 0 ? (
+            <Card className="mt-8 p-10 text-center">
+              <h2 className="text-2xl font-bold text-slate-950">
+                {activities.length ? 'No activities found' : 'No activities available'}
+              </h2>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                {activities.length
+                  ? 'Try widening your budget, changing the season, or removing one of the risk or difficulty filters.'
+                  : 'The booking API returned an empty catalogue. Please check the backend seed data or add activities in the admin dashboard.'}
+              </p>
+              {activities.length ? (
+                <Button className="mt-6" onClick={() => setSearchParams({}, { replace: true })} variant="accent">
+                  Clear filters
+                </Button>
+              ) : null}
             </Card>
           ) : null}
         </div>

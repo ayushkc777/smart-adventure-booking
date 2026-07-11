@@ -3,11 +3,11 @@ import { Ambulance, HelpCircle, Mail, MapPin, Phone, Send, ShieldAlert } from 'l
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { SectionTitle } from '../components/ui/SectionTitle'
+import { getApiError } from '../api/axios'
+import { createSupportMessage } from '../api/supportApi'
 import { useExperience } from '../context/useExperience'
 import { usePlatform } from '../context/usePlatform'
 import { isValidEmail, isValidPhone } from '../utils/validation'
-
-const SUPPORT_MESSAGES_KEY = 'smartAdventureSupportMessages'
 
 const categories = [
   'Booking support',
@@ -25,18 +25,6 @@ const faqs = [
   ['Where do urgent safety concerns go?', 'Call the operator first, then contact local emergency services when immediate help is needed.'],
 ]
 
-function readMessages() {
-  try {
-    return JSON.parse(localStorage.getItem(SUPPORT_MESSAGES_KEY) || '[]')
-  } catch {
-    return []
-  }
-}
-
-function saveMessages(messages) {
-  localStorage.setItem(SUPPORT_MESSAGES_KEY, JSON.stringify(messages))
-}
-
 export function Contact() {
   const { showToast } = useExperience()
   const { settings } = usePlatform()
@@ -50,10 +38,13 @@ export function Contact() {
   })
   const [touched, setTouched] = useState({})
   const [submittedReference, setSubmittedReference] = useState('')
+  const [submitError, setSubmitError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
     setSubmittedReference('')
+    setSubmitError('')
   }
 
   function validate() {
@@ -72,7 +63,7 @@ export function Contact() {
   const errors = validate()
   const isFormValid = Object.keys(errors).length === 0
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     setTouched({
       category: true,
@@ -83,17 +74,20 @@ export function Contact() {
       subject: true,
     })
 
-    if (!isFormValid) return
+    if (!isFormValid || submitting) return
 
-    const reference = `SUP-${Date.now().toString().slice(-6)}`
-    const message = {
-      ...form,
-      createdAt: new Date().toISOString(),
-      id: reference,
-      status: 'New',
+    setSubmitting(true)
+    try {
+      const message = await createSupportMessage(form)
+      setSubmittedReference(message.id)
+    } catch (error) {
+      const message = getApiError(error, 'Could not send support message.')
+      setSubmitError(message)
+      showToast(message, 'info')
+      setSubmitting(false)
+      return
     }
-    saveMessages([message, ...readMessages()])
-    setSubmittedReference(reference)
+    setSubmitting(false)
     setForm({
       category: categories[0],
       email: '',
@@ -198,8 +192,18 @@ export function Contact() {
                 </p>
               ) : null}
 
-              <Button disabled={!isFormValid} icon={Send} type="submit" variant="accent">
-                Send message
+              {submitError ? (
+                <p
+                  aria-live="polite"
+                  className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-800"
+                  role="alert"
+                >
+                  {submitError}
+                </p>
+              ) : null}
+
+              <Button disabled={!isFormValid || submitting} icon={Send} type="submit" variant="accent">
+                {submitting ? 'Sending...' : 'Send message'}
               </Button>
             </form>
           </Card>

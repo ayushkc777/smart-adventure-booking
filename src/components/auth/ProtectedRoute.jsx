@@ -6,7 +6,19 @@ import { Card } from '../ui/Card'
 
 export function ProtectedRoute({ allowedRoles, children }) {
   const location = useLocation()
-  const { currentUser, isAuthenticated } = useAuth()
+  const { authLoading, currentUser, isAuthenticated } = useAuth()
+
+  if (authLoading) {
+    return (
+      <section className="grid min-h-[70vh] place-items-center bg-slate-50 px-4 py-16">
+        <Card className="max-w-md p-8 text-center">
+          <LockKeyhole aria-hidden="true" className="mx-auto text-himalaya-800" size={42} />
+          <h1 className="mt-5 text-2xl font-bold text-slate-950">Checking your session</h1>
+          <p className="mt-3 text-slate-600">Please wait while we confirm your access.</p>
+        </Card>
+      </section>
+    )
+  }
 
   if (!isAuthenticated) {
     return <Navigate replace state={{ from: location }} to="/login" />

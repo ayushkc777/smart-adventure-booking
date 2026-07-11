@@ -22,6 +22,7 @@ export function Register() {
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   if (currentUser) {
     return <Navigate replace to={currentUser.role === 'admin' ? '/admin' : '/user/dashboard'} />
@@ -64,7 +65,7 @@ export function Register() {
   const validationErrors = validate()
   const isFormValid = Object.keys(validationErrors).length === 0
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     const validationErrors = validate()
     setTouched({
@@ -80,7 +81,11 @@ export function Register() {
       return
     }
 
-    const result = register(form)
+    if (submitting) return
+
+    setSubmitting(true)
+    const result = await register(form)
+    setSubmitting(false)
 
     if (!result.ok) {
       setErrors({ form: result.message })
@@ -233,8 +238,8 @@ export function Register() {
               </p>
             ) : null}
 
-            <Button disabled={!isFormValid} size="lg" type="submit" variant="accent">
-              Create account
+            <Button disabled={!isFormValid || submitting} size="lg" type="submit" variant="accent">
+              {submitting ? 'Creating account...' : 'Create account'}
             </Button>
           </form>
 

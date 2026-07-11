@@ -1,12 +1,13 @@
 import { AlertTriangle, HeartPulse, LifeBuoy, ShieldCheck } from 'lucide-react'
 import { SafetyPanel } from '../components/activity/SafetyPanel'
 import { Badge } from '../components/ui/Badge'
+import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { SectionTitle } from '../components/ui/SectionTitle'
 import { usePlatform } from '../context/usePlatform'
 
 export function Safety() {
-  const { activities, settings } = usePlatform()
+  const { activities, catalogError, catalogLoading, refreshCatalog, settings } = usePlatform()
   return (
     <>
       <section className="surface-grid bg-white">
@@ -83,9 +84,29 @@ export function Safety() {
           </div>
 
           <div className="grid gap-6">
-            {activities.map((activity) => (
-              <SafetyPanel activity={activity} key={activity.id} />
-            ))}
+            {catalogLoading ? (
+              <Card className="p-8 text-center">
+                <h2 className="text-2xl font-bold text-slate-950">Loading safety guidance</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Fetching current activity risk guidance from the booking API.
+                </p>
+              </Card>
+            ) : catalogError ? (
+              <Card className="p-8 text-center" role="alert">
+                <AlertTriangle aria-hidden="true" className="mx-auto text-rhododendron-700" size={42} />
+                <h2 className="mt-4 text-2xl font-bold text-slate-950">Safety guidance unavailable</h2>
+                <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                  {catalogError}
+                </p>
+                <Button className="mt-6" onClick={refreshCatalog} variant="accent">
+                  Try again
+                </Button>
+              </Card>
+            ) : (
+              activities.map((activity) => (
+                <SafetyPanel activity={activity} key={activity.id} />
+              ))
+            )}
           </div>
         </div>
       </section>

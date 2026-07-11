@@ -1,4 +1,5 @@
 import { Navigate, useParams } from 'react-router-dom'
+import { AlertTriangle } from 'lucide-react'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -8,8 +9,42 @@ import { operatorProfiles } from '../utils/adventureLogic'
 
 export function OperatorProfile() {
   const { id } = useParams()
-  const { activities, reviews } = usePlatform()
+  const { activities, catalogError, catalogLoading, refreshCatalog, reviews } = usePlatform()
   const operator = operatorProfiles(activities).find((item) => item.id === id)
+
+  if (catalogLoading) {
+    return (
+      <section className="bg-slate-50 py-14">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <Card className="p-10 text-center">
+            <h1 className="text-2xl font-bold text-slate-950">Loading operator profile</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Fetching current operator details from the booking API.
+            </p>
+          </Card>
+        </div>
+      </section>
+    )
+  }
+
+  if (!operator && catalogError) {
+    return (
+      <section className="bg-slate-50 py-14">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <Card className="p-10 text-center" role="alert">
+            <AlertTriangle aria-hidden="true" className="mx-auto text-rhododendron-700" size={42} />
+            <h1 className="mt-4 text-2xl font-bold text-slate-950">Operator profile unavailable</h1>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+              {catalogError}
+            </p>
+            <Button className="mt-6" onClick={refreshCatalog} variant="accent">
+              Try again
+            </Button>
+          </Card>
+        </div>
+      </section>
+    )
+  }
 
   if (!operator) {
     return <Navigate replace to="/activities" />

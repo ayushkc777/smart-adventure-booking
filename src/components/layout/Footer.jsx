@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Mail, MapPin, Mountain, Phone, Send, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
@@ -9,16 +10,21 @@ export function Footer() {
   const { currentUser, isAuthenticated } = useAuth()
   const { showToast } = useExperience()
   const { settings } = usePlatform()
+  const [newsletterSubmitting, setNewsletterSubmitting] = useState(false)
 
-  function handleNewsletter(event) {
+  async function handleNewsletter(event) {
     event.preventDefault()
-    const email = new FormData(event.currentTarget).get('email')
-    const result = subscribeNewsletter(email)
+    if (newsletterSubmitting) return
+    const formElement = event.currentTarget
+    const email = new FormData(formElement).get('email')
+    setNewsletterSubmitting(true)
+    const result = await subscribeNewsletter(email)
+    setNewsletterSubmitting(false)
     if (!result.ok) {
       showToast(result.message, 'info')
       return
     }
-    event.currentTarget.reset()
+    formElement.reset()
     showToast('Thanks for joining the adventure travel newsletter.')
   }
 
@@ -109,11 +115,12 @@ export function Footer() {
                 type="email"
               />
               <button
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-rhododendron-700 px-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-rhododendron-800"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-rhododendron-700 px-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-rhododendron-800 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                disabled={newsletterSubmitting}
                 type="submit"
               >
                 <Send aria-hidden="true" size={16} />
-                Subscribe
+                {newsletterSubmitting ? 'Subscribing...' : 'Subscribe'}
               </button>
             </form>
           </div>

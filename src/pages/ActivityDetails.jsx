@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import {
+  AlertTriangle,
   ArrowRight,
   CalendarDays,
   CheckCircle2,
@@ -29,13 +30,54 @@ import { average, formatCurrency } from '../utils/formatters'
 
 export function ActivityDetails() {
   const { id } = useParams()
-  const { activities, getActivityById, getReviewsByActivityId } = usePlatform()
+  const {
+    activities,
+    catalogError,
+    catalogLoading,
+    getActivityById,
+    getReviewsByActivityId,
+    refreshCatalog,
+  } = usePlatform()
   const { compareIds, toggleCompare, toggleWishlist, trackRecentlyViewed, wishlistIds } = useExperience()
   const activity = getActivityById(id)
 
   useEffect(() => {
     if (activity) trackRecentlyViewed(activity.id)
   }, [activity, trackRecentlyViewed])
+
+  if (catalogLoading) {
+    return (
+      <section className="bg-slate-50 py-14">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <Card className="p-10 text-center">
+            <h1 className="text-2xl font-bold text-slate-950">Loading activity details</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Fetching the latest activity details from the booking API.
+            </p>
+          </Card>
+        </div>
+      </section>
+    )
+  }
+
+  if (!activity && catalogError) {
+    return (
+      <section className="bg-slate-50 py-14">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <Card className="p-10 text-center" role="alert">
+            <AlertTriangle aria-hidden="true" className="mx-auto text-rhododendron-700" size={42} />
+            <h1 className="mt-4 text-2xl font-bold text-slate-950">Activity details unavailable</h1>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+              {catalogError}
+            </p>
+            <Button className="mt-6" onClick={refreshCatalog} variant="accent">
+              Try again
+            </Button>
+          </Card>
+        </div>
+      </section>
+    )
+  }
 
   if (!activity) {
     return <Navigate replace to="/activities" />

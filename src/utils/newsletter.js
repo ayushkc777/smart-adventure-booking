@@ -1,27 +1,16 @@
-const NEWSLETTER_KEY = 'smartAdventureNewsletterSubscribers'
+import { getApiError } from '../api/axios'
+import { subscribeNewsletterEmail } from '../api/newsletterApi'
 
-function readSubscribers() {
-  try {
-    return JSON.parse(localStorage.getItem(NEWSLETTER_KEY) || '[]')
-  } catch {
-    return []
-  }
-}
-
-export function subscribeNewsletter(email) {
+export async function subscribeNewsletter(email) {
   const normalizedEmail = String(email).trim().toLowerCase()
-  const subscribers = readSubscribers()
 
-  if (subscribers.some((subscriber) => subscriber.email === normalizedEmail)) {
-    return { ok: false, message: 'This email is already subscribed.' }
+  try {
+    await subscribeNewsletterEmail(normalizedEmail)
+    return { ok: true }
+  } catch (error) {
+    return {
+      ok: false,
+      message: getApiError(error, 'Could not subscribe this email.'),
+    }
   }
-
-  localStorage.setItem(
-    NEWSLETTER_KEY,
-    JSON.stringify([
-      ...subscribers,
-      { email: normalizedEmail, subscribedAt: new Date().toISOString() },
-    ]),
-  )
-  return { ok: true }
 }

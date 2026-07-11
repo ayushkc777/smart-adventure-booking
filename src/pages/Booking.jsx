@@ -14,9 +14,9 @@ import { isFutureOrToday, isValidEmail, isValidPhone, todayDateString } from '..
 
 const steps = ['Trip', 'Operator', 'Travelers', 'Extras', 'Review', 'Confirmation']
 const extras = [
-  { id: 'photo-video', label: 'Photo and video package', price: 2500 },
-  { id: 'private-transfer', label: 'Private hotel transfer', price: 3500 },
-  { id: 'priority-support', label: 'Priority operator confirmation', price: 1200 },
+  { id: 'photo-video', label: 'Photo and video package', price: 500 },
+  { id: 'private-transfer', label: 'Private hotel transfer', price: 500 },
+  { id: 'priority-support', label: 'Priority operator confirmation', price: 500 },
 ]
 
 export function Booking() {
@@ -25,7 +25,7 @@ export function Booking() {
   const navigate = useNavigate()
   const { addBooking, currentUser } = useAuth()
   const { showToast } = useExperience()
-  const { getActivityById, settings } = usePlatform()
+  const { catalogError, catalogLoading, getActivityById, refreshCatalog, settings } = usePlatform()
   const activity = getActivityById(id)
   const initialOperatorId = searchParams.get('operator')
   const availableOperators =
@@ -46,11 +46,46 @@ export function Booking() {
     phone: currentUser?.phone ?? '',
   })
   const [errors, setErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
 
   const selectedOperator = useMemo(
     () => activity?.operators.find((operator) => operator.id === selectedOperatorId) ?? defaultOperator,
     [activity, defaultOperator, selectedOperatorId],
   )
+
+  if (catalogLoading) {
+    return (
+      <section className="bg-slate-50 py-14">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <Card className="p-10 text-center">
+            <h1 className="text-2xl font-bold text-slate-950">Loading booking options</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Fetching current operators and prices from the booking API.
+            </p>
+          </Card>
+        </div>
+      </section>
+    )
+  }
+
+  if (!activity && catalogError) {
+    return (
+      <section className="bg-slate-50 py-14">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <Card className="p-10 text-center" role="alert">
+            <AlertTriangle aria-hidden="true" className="mx-auto text-rhododendron-700" size={42} />
+            <h1 className="mt-4 text-2xl font-bold text-slate-950">Booking options unavailable</h1>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+              {catalogError}
+            </p>
+            <Button className="mt-6" onClick={refreshCatalog} variant="accent">
+              Try again
+            </Button>
+          </Card>
+        </div>
+      </section>
+    )
+  }
 
   if (!activity) {
     return <Navigate replace to="/activities" />
@@ -116,16 +151,17 @@ export function Booking() {
     )
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     const validationErrors = validateBooking()
 
-    if (Object.keys(validationErrors).length) {
+    if (Object.keys(validationErrors).length || submitting) {
       setErrors(validationErrors)
       return
     }
 
-    const savedBooking = addBooking({
+    setSubmitting(true)
+    const savedBooking = await addBooking({
       activityId: activity.id,
       activityName: activity.name,
       customerEmail: booking.email,
@@ -141,6 +177,12 @@ export function Booking() {
       people: booking.people,
       total,
     })
+    setSubmitting(false)
+
+    if (savedBooking?.ok === false) {
+      showToast(savedBooking.message, 'info')
+      return
+    }
 
     showToast('Booking request submitted successfully.')
     navigate('/booking-success', { state: savedBooking })
@@ -345,8 +387,8 @@ export function Booking() {
                     Continue
                   </Button>
                 ) : (
-                  <Button icon={CheckCircle2} type="submit" variant="accent">
-                    Confirm booking
+                  <Button disabled={submitting} icon={CheckCircle2} type="submit" variant="accent">
+                    {submitting ? 'Sending request...' : 'Confirm booking'}
                   </Button>
                 )}
               </div>

@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { Bell, CalendarCheck, Clock, Heart, ShieldCheck, Star, WalletCards } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { getNotifications } from '../api/notificationApi'
 import { ActivityCard } from '../components/activity/ActivityCard'
 import { Avatar } from '../components/ui/Avatar'
 import { Button } from '../components/ui/Button'
@@ -16,6 +18,7 @@ export function UserDashboard() {
   const { currentUser, userBookings } = useAuth()
   const { activities } = usePlatform()
   const { recentlyViewedIds, wishlistIds } = useExperience()
+  const [notifications, setNotifications] = useState([])
   const today = todayDateString()
   const upcomingBookings = userBookings.filter((booking) => booking.date >= today)
   const pastBookings = userBookings.filter((booking) => booking.date < today)
@@ -35,6 +38,23 @@ export function UserDashboard() {
     location: savedActivities[0]?.location ?? '',
     riskComfort: 'Medium',
   }).map((item) => item.activity)
+
+  useEffect(() => {
+    let ignore = false
+    async function loadNotifications() {
+      try {
+        const items = await getNotifications()
+        if (!ignore) setNotifications(items)
+      } catch {
+        if (!ignore) setNotifications([])
+      }
+    }
+
+    loadNotifications()
+    return () => {
+      ignore = true
+    }
+  }, [])
 
   return (
     <>
@@ -91,9 +111,20 @@ export function UserDashboard() {
                 <Bell aria-hidden="true" className="text-rhododendron-700" size={28} />
                 <h2 className="mt-4 text-xl font-bold text-slate-950">Notifications</h2>
                 <div className="mt-4 grid gap-3 text-sm text-slate-700">
-                  <p className="rounded-xl bg-slate-50 p-4">Review weather and operator messages before travel.</p>
-                  <p className="rounded-xl bg-slate-50 p-4">Save emergency contacts offline before remote trips.</p>
-                  <p className="rounded-xl bg-slate-50 p-4">Compare operator safety ratings before booking high-risk activities.</p>
+                  {notifications.length ? (
+                    notifications.slice(0, 3).map((notification) => (
+                      <p className="rounded-xl bg-slate-50 p-4" key={notification._id ?? notification.id}>
+                        <strong className="block text-slate-950">{notification.title}</strong>
+                        {notification.message}
+                      </p>
+                    ))
+                  ) : (
+                    <>
+                      <p className="rounded-xl bg-slate-50 p-4">Review weather and operator messages before travel.</p>
+                      <p className="rounded-xl bg-slate-50 p-4">Save emergency contacts offline before remote trips.</p>
+                      <p className="rounded-xl bg-slate-50 p-4">Compare operator safety ratings before booking high-risk activities.</p>
+                    </>
+                  )}
                 </div>
               </Card>
               <Card className="p-6">

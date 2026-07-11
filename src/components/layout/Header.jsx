@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { flushSync } from 'react-dom'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import {
   Bell,
   CalendarCheck,
@@ -54,7 +53,6 @@ export function Header() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const profileButtonRef = useRef(null)
   const profileMenuRef = useRef(null)
-  const navigate = useNavigate()
   const { currentUser, isAuthenticated, logout } = useAuth()
   const { showToast } = useExperience()
   const isAdmin = currentUser?.role === 'admin'
@@ -87,12 +85,12 @@ export function Header() {
     }
   }, [isProfileOpen])
 
-  function handleLogout() {
+  async function handleLogout() {
     setIsOpen(false)
     setIsProfileOpen(false)
-    flushSync(() => logout())
+    await logout()
     showToast('Logged out successfully.')
-    navigate('/', { replace: true })
+    window.location.replace('/')
   }
 
   return (

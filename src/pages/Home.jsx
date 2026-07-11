@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
+  AlertTriangle,
   ArrowRight,
   CheckCircle2,
   DollarSign,
@@ -53,9 +54,17 @@ const faqs = [
 export function Home() {
   const navigate = useNavigate()
   const { showToast } = useExperience()
-  const { activities, activityTypes, locations } = usePlatform()
+  const {
+    activities,
+    activityTypes,
+    catalogError,
+    catalogLoading,
+    locations,
+    refreshCatalog,
+  } = usePlatform()
   const [query, setQuery] = useState('')
   const [location, setLocation] = useState('')
+  const [newsletterSubmitting, setNewsletterSubmitting] = useState(false)
   const featuredActivities = useMemo(
     () => [...activities].sort((a, b) => b.popularityScore - a.popularityScore).slice(0, 6),
     [activities],
@@ -80,6 +89,9 @@ export function Home() {
     () => [...activities].sort((a, b) => a.priceFrom - b.priceFrom).slice(0, 3),
     [activities],
   )
+  const startingPrice = activities.length
+    ? formatCurrency(Math.min(...activities.map((activity) => activity.priceFrom)))
+    : 'Unavailable'
 
   function handleSearch(event) {
     event.preventDefault()
@@ -89,15 +101,19 @@ export function Home() {
     navigate(`/activities?${params.toString()}`)
   }
 
-  function handleNewsletter(event) {
+  async function handleNewsletter(event) {
     event.preventDefault()
-    const email = new FormData(event.currentTarget).get('email')
-    const result = subscribeNewsletter(email)
+    if (newsletterSubmitting) return
+    const formElement = event.currentTarget
+    const email = new FormData(formElement).get('email')
+    setNewsletterSubmitting(true)
+    const result = await subscribeNewsletter(email)
+    setNewsletterSubmitting(false)
     if (!result.ok) {
       showToast(result.message, 'info')
       return
     }
-    event.currentTarget.reset()
+    formElement.reset()
     showToast('Thanks for joining the adventure travel newsletter.')
   }
 
@@ -193,6 +209,41 @@ export function Home() {
           </div>
         </div>
       </section>
+
+      {!catalogLoading && catalogError ? (
+        <section className="border-b border-slate-200 bg-white py-8">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <Card className="border-rhododendron-200 bg-rhododendron-50 p-5 shadow-none" role="alert">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-3">
+                  <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0 text-rhododendron-700" size={22} />
+                  <div>
+                    <h2 className="font-bold text-rhododendron-950">Live catalogue unavailable</h2>
+                    <p className="mt-1 text-sm leading-6 text-rhododendron-900">{catalogError}</p>
+                  </div>
+                </div>
+                <Button onClick={refreshCatalog} variant="accent">
+                  Try again
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </section>
+      ) : null}
+
+      {!catalogLoading && !catalogError && activities.length === 0 ? (
+        <section className="border-b border-slate-200 bg-white py-8">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <Card className="p-6 text-center">
+              <h2 className="text-xl font-bold text-slate-950">No activities available</h2>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                The booking API returned an empty catalogue. Add activities in the admin dashboard
+                or reseed the backend database.
+              </p>
+            </Card>
+          </div>
+        </section>
+      ) : null}
 
       <SmartTripPlanner activities={activities} activityTypes={activityTypes} locations={locations} />
 
@@ -365,7 +416,7 @@ export function Home() {
               <TrendingUp aria-hidden="true" className="text-himalaya-800" size={30} />
               <h3 className="mt-4 text-2xl font-bold text-slate-950">Platform statistics</h3>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <Stat label="Starting from" value={formatCurrency(Math.min(...activities.map((activity) => activity.priceFrom)))} />
+                <Stat label="Starting from" value={startingPrice} />
                 <Stat label="Destinations" value={locations.length} />
                 <Stat label="Reviews tracked" value={activities.reduce((total, activity) => total + activity.reviewCount, 0)} />
                 <Stat label="Operators" value={activities.reduce((total, activity) => total + activity.operators.length, 0)} />
@@ -417,8 +468,8 @@ export function Home() {
                   type="email"
                 />
               </label>
-              <Button type="submit" variant="accent">
-                Subscribe
+              <Button disabled={newsletterSubmitting} type="submit" variant="accent">
+                {newsletterSubmitting ? 'Subscribing...' : 'Subscribe'}
               </Button>
             </form>
           </Card>
