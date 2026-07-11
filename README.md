@@ -10,6 +10,21 @@ Nepal Adventure SmartBook is a professional adventure tourism booking platform f
 - React Router
 - Lucide React
 
+## Installation
+
+```bash
+cd ~/Documents/smart-adventure-booking
+npm install
+```
+
+## Environment Variables
+
+Create `.env` in the frontend project root.
+
+```env
+VITE_API_URL=http://127.0.0.1:5050
+```
+
 ## Pages
 
 - `/` Premium landing page with search, smart planner, destinations, featured activities, operators, testimonials, FAQ, and newsletter signup
@@ -34,7 +49,7 @@ Nepal Adventure SmartBook is a professional adventure tourism booking platform f
 
 ## Features
 
-- Expanded Nepal adventure catalog with 9 activities, destinations, operators, reviews, pricing, coordinates, safety scores, risk levels, best seasons, popularity, and duration metadata
+- API-backed Nepal adventure catalog with destinations, operators, reviews, pricing, coordinates, safety scores, risk levels, best seasons, popularity, and duration metadata
 - Smart Trip Planner with rule-based recommendations using experience level, budget, location, duration, risk comfort, activity type, and group size
 - Advanced filtering by keyword, province/location, activity type, price, duration, difficulty, risk, season, rating, and sorting by price, rating, popularity, or safety score
 - Activity wishlist, recently viewed tracking, and comparison state saved in browser storage
@@ -42,7 +57,7 @@ Nepal Adventure SmartBook is a professional adventure tourism booking platform f
 - Multi-step booking flow with validation for date, group size, email, phone, emergency contact, extras, safety acknowledgement, and review summary
 - Booking receipt with reference number, traveler details, emergency contact, extras, total, status, print, and download actions
 - Traveler profile photo, nationality, preferred language, emergency contact, and password change flow
-- Contact support messages saved in browser storage and reviewed from the admin support section
+- Contact support messages submitted through the backend API and reviewed from the admin support section
 - Toast notifications for account, wishlist, comparison, booking, newsletter, and admin actions
 - Admin layout separated from public layout with sidebar navigation, analytics, management sections, settings, safety alert management, and public website access
 
@@ -70,12 +85,12 @@ Password: User1234
 - Traveler users are sent to `/user/dashboard` after login.
 - Admin routes are restricted to admin accounts and use a dedicated admin layout.
 - Traveler dashboard, bookings, profile, booking, and booking success pages are restricted to traveler accounts.
-- Registration creates a traveler account in browser storage.
-- Logout clears the active browser session and returns to the home page.
+- Registration creates a traveler account through the backend API.
+- Logout clears the active session token and returns to the home page.
 
 ## Data and Storage
 
-Catalog, review, price, safety, and operator content is organized inside `src/data`. Account sessions, registered travelers, wishlist, comparisons, recently viewed activities, admin settings, and booking requests are stored in browser storage for this frontend implementation. The structure is ready for future live inventory, secure payments, authentication, and operator API connections.
+Authentication, activities, operators, bookings, reviews, support messages, wishlist, newsletter subscriptions, notifications, users, dashboard statistics, and admin analytics use the backend API configured by `VITE_API_URL`. Browser storage is kept only for the active session token, short-term session cache, comparison selections, recently viewed activities, guest wishlist state, and admin UI settings.
 
 ## Run Locally
 
@@ -84,8 +99,42 @@ npm install
 npm run dev
 ```
 
+The local frontend runs at:
+
+```text
+http://localhost:5173
+```
+
+## Available Scripts
+
+```bash
+npm run dev      # Start Vite development server
+npm run lint     # Run oxlint
+npm run build    # Build production frontend
+npm run preview  # Preview the production build
+```
+
 ## Build
 
 ```bash
 npm run build
+```
+
+## Folder Structure
+
+```text
+src/
+  api/           Axios client and API modules
+  components/    Reusable layout, UI, auth, and activity components
+  context/       Auth, platform, and traveler experience state
+  data/          Local metadata used for UI enrichment and settings defaults
+  pages/         Public, user, admin, support, and legal pages
+  routes/        React Router configuration
+  utils/         Formatting, validation, newsletter, and recommendation helpers
+  App.jsx        App provider shell
+  main.jsx       React entry point
+  index.css      Global Tailwind and design system styles
+public/
+  images/        Local adventure images
+  favicon.svg    Project favicon
 ```

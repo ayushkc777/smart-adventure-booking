@@ -40,7 +40,7 @@ const pages = {
       },
       {
         title: 'Profile photos',
-        text: 'Profile photos are stored in the traveler browser for personalization. Travelers can change or remove the photo from their profile page at any time.',
+        text: 'Profile photos are stored with the traveler account for personalization. Travelers can change or remove the photo from their profile page at any time.',
       },
       {
         title: 'Booking and support records',
