@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Info, X } from 'lucide-react'
+import { getApiError } from '../api/axios'
+import {
+  addWishlistActivity,
+  getWishlist,
+  removeWishlistActivity,
+} from '../api/wishlistApi'
 import { ExperienceContext } from './experienceContext'
 import { useAuth } from './useAuth'
 
@@ -41,9 +47,27 @@ export function ExperienceProvider({ children }) {
   const [toasts, setToasts] = useState([])
 
   useEffect(() => {
-    setWishlistIds(readScoped(WISHLIST_KEY, ownerId))
+    let ignore = false
+    async function loadWishlist() {
+      if (!currentUser) {
+        setWishlistIds(readScoped(WISHLIST_KEY, ownerId))
+        return
+      }
+
+      try {
+        const ids = await getWishlist()
+        if (!ignore) setWishlistIds(ids)
+      } catch {
+        if (!ignore) setWishlistIds([])
+      }
+    }
+
+    loadWishlist()
     setRecentlyViewedIds(readScoped(RECENT_KEY, ownerId))
-  }, [ownerId])
+    return () => {
+      ignore = true
+    }
+  }, [currentUser, ownerId])
 
   const showToast = useCallback((message, tone = 'success') => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -57,13 +81,27 @@ export function ExperienceProvider({ children }) {
     setToasts((current) => current.filter((toast) => toast.id !== id))
   }, [])
 
-  const toggleWishlist = useCallback((activityId) => {
+  const toggleWishlist = useCallback(async (activityId) => {
     const exists = wishlistIds.includes(activityId)
     const next = exists ? wishlistIds.filter((id) => id !== activityId) : [activityId, ...wishlistIds]
     setWishlistIds(next)
-    saveJson(scopedKey(WISHLIST_KEY, ownerId), next)
-    showToast(exists ? 'Removed from saved activities.' : 'Activity saved to your wishlist.')
-  }, [ownerId, showToast, wishlistIds])
+    if (!currentUser) {
+      saveJson(scopedKey(WISHLIST_KEY, ownerId), next)
+      showToast(exists ? 'Removed from saved activities.' : 'Activity saved to your wishlist.')
+      return
+    }
+
+    try {
+      const syncedIds = exists
+        ? await removeWishlistActivity(activityId)
+        : await addWishlistActivity(activityId)
+      setWishlistIds(syncedIds)
+      showToast(exists ? 'Removed from saved activities.' : 'Activity saved to your wishlist.')
+    } catch (error) {
+      setWishlistIds(wishlistIds)
+      showToast(getApiError(error, 'Could not update wishlist.'), 'info')
+    }
+  }, [currentUser, ownerId, showToast, wishlistIds])
 
   const toggleCompare = useCallback((activityId) => {
     if (compareIds.includes(activityId)) {

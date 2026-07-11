@@ -1,393 +1,282 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  changeCurrentPassword,
+  deleteCurrentUserAvatar,
+  getCurrentUser,
+  loginUser,
+  logoutUser,
+  registerUser,
+  updateCurrentUser,
+  uploadCurrentUserAvatar,
+} from '../api/authApi'
+import {
+  createBooking,
+  getBookings,
+  updateBookingStatusRecord,
+} from '../api/bookingApi'
+import {
+  deleteUserRecord,
+  getUsers,
+  updateUserRecord,
+} from '../api/adminApi'
+import { getApiError, SESSION_KEY, TOKEN_KEY, setAuthToken } from '../api/axios'
 import { AuthContext } from './authContext'
 
-const USERS_KEY = 'smartAdventureUsers'
-const SESSION_KEY = 'smartAdventureSession'
-const BOOKINGS_KEY = 'smartAdventureBookings'
-const BOOKING_STATUS_KEY = 'smartAdventureBookingStatusUpdates'
-const DELETED_USER_IDS_KEY = 'smartAdventureDeletedUserIds'
-
-const defaultUsers = [
-  {
-    id: 'admin-001',
-    fullName: 'Admin Manager',
-    email: 'admin@smartadventure.com',
-    phone: '+977 9800000000',
-    password: 'Admin123',
-    role: 'admin',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    emergencyContact: '+977 9800000000',
-    nationality: 'Nepali',
-    preferredLanguage: 'English',
-    profilePhoto: '',
-    status: 'active',
-  },
-  {
-    id: 'traveler-001',
-    fullName: 'Smart Adventure Traveler',
-    email: 'user@smartadventure.com',
-    phone: '+977 9812345678',
-    password: 'User1234',
-    role: 'user',
-    createdAt: '2026-01-05T00:00:00.000Z',
-    emergencyContact: '+977 9811111111',
-    nationality: 'Nepali',
-    preferredLanguage: 'English',
-    profilePhoto: '',
-    status: 'active',
-  },
-]
-
-function normalizeUserId(id) {
-  if (id === `admin-${'de'}${'mo'}`) return 'admin-001'
-  if (id === `user-${'de'}${'mo'}`) return 'traveler-001'
-  return id
-}
-
-function readJson(key, fallback) {
+function readSession() {
   try {
-    const value = localStorage.getItem(key)
-    return value ? JSON.parse(value) : fallback
+    const value = localStorage.getItem(SESSION_KEY)
+    return value ? JSON.parse(value) : null
   } catch {
-    return fallback
-  }
-}
-
-function saveJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value))
-}
-
-function publicUser(user) {
-  if (!user) return null
-  return {
-    id: normalizeUserId(user.id),
-    emergencyContact: user.emergencyContact ?? '',
-    fullName: user.fullName,
-    email: user.email,
-    nationality: user.nationality ?? '',
-    phone: user.phone,
-    preferredLanguage: user.preferredLanguage ?? 'English',
-    profilePhoto: user.profilePhoto ?? '',
-    role: user.role,
-    status: user.status ?? 'active',
-  }
-}
-
-function getInitialSession() {
-  const session = readJson(SESSION_KEY, null)
-  if (!session) return null
-
-  const storedUsers = readJson(USERS_KEY, [])
-  const normalizedId = normalizeUserId(session.id)
-  const deletedUserIds = new Set(
-    readJson(DELETED_USER_IDS_KEY, []).map((id) => normalizeUserId(id)),
-  )
-  if (deletedUserIds.has(normalizedId)) {
-    localStorage.removeItem(SESSION_KEY)
     return null
   }
-  const storedUser = storedUsers.find(
-    (user) =>
-      normalizeUserId(user.id) === normalizedId ||
-      user.email?.toLowerCase() === session.email?.toLowerCase(),
-  )
-  const normalizedSession = publicUser({ ...session, ...(storedUser ?? {}), id: normalizedId })
-  saveJson(SESSION_KEY, normalizedSession)
-  return normalizedSession
 }
 
-function getInitialBookings() {
-  const storedBookings = readJson(BOOKINGS_KEY, [])
-  const normalizedBookings = storedBookings.map((booking) => ({
-    ...booking,
-    userId: normalizeUserId(booking.userId),
-  }))
-  saveJson(BOOKINGS_KEY, normalizedBookings)
-  return normalizedBookings
+function saveSession(user) {
+  if (user) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user))
+  } else {
+    localStorage.removeItem(SESSION_KEY)
+  }
 }
 
-function getInitialUsers() {
-  const storedUsers = readJson(USERS_KEY, [])
-  const deletedUserIds = new Set(
-    readJson(DELETED_USER_IDS_KEY, []).map((id) => normalizeUserId(id)),
-  )
-  const activeDefaultUsers = defaultUsers.filter(
-    (user) => !deletedUserIds.has(normalizeUserId(user.id)),
-  )
-  const activeDefaultEmails = new Set(activeDefaultUsers.map((user) => user.email))
-  const storedByEmail = new Map(storedUsers.map((user) => [user.email.toLowerCase(), user]))
-  const seededUsers = activeDefaultUsers.map((user) => {
-    const storedUser = storedByEmail.get(user.email.toLowerCase())
-    return storedUser
-      ? {
-          ...user,
-          fullName: storedUser.fullName,
-          phone: storedUser.phone,
-          id: user.id,
-          role: user.role === 'admin' ? 'admin' : storedUser.role ?? user.role,
-          email: user.email,
-          password: storedUser.password ?? user.password,
-          createdAt: storedUser.createdAt ?? user.createdAt,
-          emergencyContact: storedUser.emergencyContact ?? user.emergencyContact ?? '',
-          nationality: storedUser.nationality ?? user.nationality ?? '',
-          preferredLanguage: storedUser.preferredLanguage ?? user.preferredLanguage ?? 'English',
-          profilePhoto: storedUser.profilePhoto ?? user.profilePhoto ?? '',
-          status: storedUser.status ?? 'active',
-        }
-      : user
-  })
-  const customUsers = storedUsers
-    .filter(
-      (user) =>
-        !activeDefaultEmails.has(user.email.toLowerCase()) &&
-        !deletedUserIds.has(normalizeUserId(user.id)),
-    )
-    .map((user) => ({
-      ...user,
-      createdAt: user.createdAt ?? new Date().toISOString(),
-      emergencyContact: user.emergencyContact ?? '',
-      nationality: user.nationality ?? '',
-      preferredLanguage: user.preferredLanguage ?? 'English',
-      profilePhoto: user.profilePhoto ?? '',
-      status: user.status ?? 'active',
-    }))
-  const users = [...seededUsers, ...customUsers]
-  saveJson(USERS_KEY, users)
-  return users
+function mergeById(items, updatedItem) {
+  if (!updatedItem) return items
+  const exists = items.some((item) => item.id === updatedItem.id)
+  return exists
+    ? items.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+    : [updatedItem, ...items]
 }
 
 export function AuthProvider({ children }) {
-  const [users, setUsers] = useState(getInitialUsers)
-  const [currentUser, setCurrentUser] = useState(getInitialSession)
-  const [bookingRecords, setBookingRecords] = useState(getInitialBookings)
-  const [bookingStatusUpdates, setBookingStatusUpdates] = useState(() =>
-    readJson(BOOKING_STATUS_KEY, {}),
-  )
+  const [authLoading, setAuthLoading] = useState(Boolean(localStorage.getItem(TOKEN_KEY)))
+  const [currentUser, setCurrentUser] = useState(readSession)
+  const [bookingRecords, setBookingRecords] = useState([])
+  const [bookingStatusUpdates, setBookingStatusUpdates] = useState({})
+  const [users, setUsers] = useState([])
 
-  function syncUsers(nextUsers) {
-    setUsers(nextUsers)
-    saveJson(USERS_KEY, nextUsers)
-  }
-
-  function login(email, password) {
-    const normalizedEmail = email.trim().toLowerCase()
-    const matchedUser = users.find(
-      (user) => user.email.toLowerCase() === normalizedEmail && user.password === password,
-    )
-
-    if (!matchedUser) {
-      return { ok: false, message: 'Invalid email or password. Please try again.' }
+  const loadBookings = useCallback(async () => {
+    if (!localStorage.getItem(TOKEN_KEY)) return []
+    try {
+      const bookings = await getBookings()
+      setBookingRecords(bookings)
+      return bookings
+    } catch {
+      setBookingRecords([])
+      return []
     }
+  }, [])
 
-    if (matchedUser.status === 'suspended') {
-      return { ok: false, message: 'This account is suspended. Please contact support.' }
+  const loadUsers = useCallback(async (user = readSession()) => {
+    if (user?.role !== 'admin') {
+      setUsers([])
+      return []
     }
-
-    const sessionUser = publicUser(matchedUser)
-    setCurrentUser(sessionUser)
-    saveJson(SESSION_KEY, sessionUser)
-    return { ok: true, user: sessionUser }
-  }
-
-  function register({ fullName, email, phone, password }) {
-    const normalizedEmail = email.trim().toLowerCase()
-    const existingUser = users.find((user) => user.email.toLowerCase() === normalizedEmail)
-
-    if (existingUser) {
-      return { ok: false, message: 'An account with this email already exists.' }
+    try {
+      const apiUsers = await getUsers()
+      setUsers(apiUsers)
+      return apiUsers
+    } catch {
+      setUsers([])
+      return []
     }
+  }, [])
 
-    const newUser = {
-      id: `user-${Date.now()}`,
-      fullName: fullName.trim(),
-      email: normalizedEmail,
-      phone: phone.trim(),
-      password,
-      role: 'user',
-      createdAt: new Date().toISOString(),
-      emergencyContact: '',
-      nationality: '',
-      preferredLanguage: 'English',
-      profilePhoto: '',
-      status: 'active',
-    }
-    const nextUsers = [...users, newUser]
-    syncUsers(nextUsers)
+  useEffect(() => {
+    let ignore = false
 
-    const sessionUser = publicUser(newUser)
-    setCurrentUser(sessionUser)
-    saveJson(SESSION_KEY, sessionUser)
-    return { ok: true, user: sessionUser }
-  }
-
-  function logout() {
-    setCurrentUser(null)
-    localStorage.removeItem(SESSION_KEY)
-  }
-
-  function updateProfile(updates) {
-    if (!currentUser) return { ok: false, message: 'Please log in again.' }
-
-    const nextUsers = users.map((user) =>
-      user.id === currentUser.id
-        ? {
-            ...user,
-            emergencyContact: updates.emergencyContact.trim(),
-            fullName: updates.fullName.trim(),
-            nationality: updates.nationality.trim(),
-            phone: updates.phone.trim(),
-            preferredLanguage: updates.preferredLanguage,
-            profilePhoto: updates.profilePhoto ?? user.profilePhoto ?? '',
-          }
-        : user,
-    )
-    syncUsers(nextUsers)
-
-    const nextSession = {
-      ...currentUser,
-      emergencyContact: updates.emergencyContact.trim(),
-      fullName: updates.fullName.trim(),
-      nationality: updates.nationality.trim(),
-      phone: updates.phone.trim(),
-      preferredLanguage: updates.preferredLanguage,
-      profilePhoto: updates.profilePhoto ?? currentUser.profilePhoto ?? '',
-    }
-    setCurrentUser(nextSession)
-    saveJson(SESSION_KEY, nextSession)
-    return { ok: true }
-  }
-
-  function changePassword({ currentPassword, newPassword }) {
-    if (!currentUser) return { ok: false, message: 'Please log in again.' }
-
-    const storedUser = users.find((user) => user.id === currentUser.id)
-    if (!storedUser) return { ok: false, message: 'Account not found.' }
-
-    if (storedUser.password !== currentPassword) {
-      return { ok: false, message: 'Current password is incorrect.' }
-    }
-
-    const nextUsers = users.map((user) =>
-      user.id === currentUser.id ? { ...user, password: newPassword } : user,
-    )
-    syncUsers(nextUsers)
-    return { ok: true }
-  }
-
-  function addBooking(booking) {
-    const reference = `NA-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`
-    const nextBooking = {
-      ...booking,
-      bookingReference: reference,
-      id: reference,
-      userId: currentUser?.id,
-      customerName: booking.customerName ?? currentUser?.fullName,
-      customerEmail: booking.customerEmail ?? currentUser?.email,
-      customerPhone: booking.customerPhone ?? currentUser?.phone,
-      status: 'Pending confirmation',
-      createdAt: new Date().toISOString(),
-    }
-    const nextBookings = [nextBooking, ...bookingRecords]
-    setBookingRecords(nextBookings)
-    saveJson(BOOKINGS_KEY, nextBookings)
-    return nextBooking
-  }
-
-  function updateBookingStatus(bookingId, status) {
-    const nextRecords = bookingRecords.map((booking) =>
-      booking.id === bookingId ? { ...booking, status } : booking,
-    )
-    const nextStatuses = { ...bookingStatusUpdates, [bookingId]: status }
-    setBookingRecords(nextRecords)
-    saveJson(BOOKINGS_KEY, nextRecords)
-    setBookingStatusUpdates(nextStatuses)
-    saveJson(BOOKING_STATUS_KEY, nextStatuses)
-  }
-
-  function updateUserByAdmin(userId, updates) {
-    if (!currentUser || currentUser.role !== 'admin') {
-      return { ok: false, message: 'Admin access is required.' }
-    }
-
-    const existingUser = users.find((user) => user.id === userId)
-    if (!existingUser) return { ok: false, message: 'User not found.' }
-
-    const nextRole = userId === currentUser.id ? currentUser.role : updates.role
-    const nextStatus = userId === currentUser.id ? 'active' : updates.status
-    const nextUsers = users.map((user) =>
-      user.id === userId
-        ? {
-            ...user,
-            fullName: updates.fullName.trim(),
-            phone: updates.phone.trim(),
-            role: nextRole,
-            status: nextStatus ?? user.status ?? 'active',
-          }
-        : user,
-    )
-    syncUsers(nextUsers)
-
-    if (userId === currentUser.id) {
-      const nextSession = {
-        ...currentUser,
-        fullName: updates.fullName.trim(),
-        phone: updates.phone.trim(),
+    async function restoreSession() {
+      if (!localStorage.getItem(TOKEN_KEY)) {
+        setCurrentUser(null)
+        setBookingRecords([])
+        setUsers([])
+        saveSession(null)
+        setAuthLoading(false)
+        return
       }
-      setCurrentUser(nextSession)
-      saveJson(SESSION_KEY, nextSession)
+
+      try {
+        const user = await getCurrentUser()
+        if (ignore) return
+        setCurrentUser(user)
+        saveSession(user)
+        await loadBookings()
+        await loadUsers(user)
+      } catch {
+        if (!ignore) {
+          setCurrentUser(null)
+          setBookingRecords([])
+          setUsers([])
+          saveSession(null)
+          setAuthToken('')
+        }
+      } finally {
+        if (!ignore) setAuthLoading(false)
+      }
     }
 
-    return { ok: true }
+    restoreSession()
+    return () => {
+      ignore = true
+    }
+  }, [loadBookings, loadUsers])
+
+  async function login(email, password) {
+    try {
+      const { user } = await loginUser(email, password)
+      setCurrentUser(user)
+      saveSession(user)
+      await loadBookings()
+      await loadUsers(user)
+      return { ok: true, user }
+    } catch (error) {
+      return { ok: false, message: getApiError(error, 'Invalid email or password. Please try again.') }
+    }
   }
 
-  function updateUserStatus(userId, status) {
+  async function register({ fullName, email, phone, password }) {
+    try {
+      const { user } = await registerUser({ fullName, email, password, phone })
+      setCurrentUser(user)
+      saveSession(user)
+      await loadBookings()
+      return { ok: true, user }
+    } catch (error) {
+      return { ok: false, message: getApiError(error, 'Could not create account.') }
+    }
+  }
+
+  async function logout() {
+    try {
+      if (localStorage.getItem(TOKEN_KEY)) {
+        await logoutUser()
+      }
+    } catch {
+      setAuthToken('')
+    }
+    setCurrentUser(null)
+    setBookingRecords([])
+    setUsers([])
+    saveSession(null)
+  }
+
+  async function updateProfile(updates) {
+    if (!currentUser) return { ok: false, message: 'Please log in again.' }
+
+    try {
+      const user = await updateCurrentUser(updates)
+      let nextUser = {
+        ...user,
+        profilePhoto:
+          updates.profilePhoto === ''
+            ? ''
+            : updates.profilePhoto?.startsWith('data:')
+              ? updates.profilePhoto
+              : user.profilePhoto,
+      }
+
+      if (updates.profilePhoto === '') {
+        nextUser = await deleteCurrentUserAvatar()
+      }
+
+      setCurrentUser(nextUser)
+      saveSession(nextUser)
+      return { ok: true, user: nextUser }
+    } catch (error) {
+      return { ok: false, message: getApiError(error, 'Could not update profile.') }
+    }
+  }
+
+  async function uploadProfilePhoto(file) {
+    if (!file) return { ok: false, message: 'Choose a profile photo first.' }
+
+    try {
+      const user = await uploadCurrentUserAvatar(file)
+      setCurrentUser(user)
+      saveSession(user)
+      return { ok: true, user }
+    } catch (error) {
+      return { ok: false, message: getApiError(error, 'Could not upload profile photo.') }
+    }
+  }
+
+  async function changePassword({ currentPassword, newPassword }) {
+    if (!currentUser) return { ok: false, message: 'Please log in again.' }
+
+    try {
+      await changeCurrentPassword({ currentPassword, newPassword })
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, message: getApiError(error, 'Could not change password.') }
+    }
+  }
+
+  async function addBooking(booking) {
+    try {
+      const savedBooking = await createBooking(booking)
+      setBookingRecords((current) => [savedBooking, ...current])
+      return savedBooking
+    } catch (error) {
+      return { ok: false, message: getApiError(error, 'Could not submit booking request.') }
+    }
+  }
+
+  async function updateBookingStatus(bookingId, status) {
+    try {
+      const booking = await updateBookingStatusRecord(bookingId, status)
+      setBookingRecords((current) => mergeById(current, booking))
+      setBookingStatusUpdates((current) => ({ ...current, [bookingId]: booking.status }))
+      return { ok: true, booking }
+    } catch (error) {
+      return { ok: false, message: getApiError(error, 'Could not update booking status.') }
+    }
+  }
+
+  async function updateUserByAdmin(userId, updates) {
     if (!currentUser || currentUser.role !== 'admin') {
       return { ok: false, message: 'Admin access is required.' }
     }
 
-    if (userId === currentUser.id) {
-      return { ok: false, message: 'You cannot suspend your own admin account.' }
+    try {
+      const user = await updateUserRecord(userId, {
+        fullName: updates.fullName?.trim(),
+        phone: updates.phone?.trim(),
+        role: updates.role,
+        status: updates.status,
+      })
+      setUsers((current) => mergeById(current, user))
+      if (user.id === currentUser.id) {
+        setCurrentUser(user)
+        saveSession(user)
+      }
+      return { ok: true, user }
+    } catch (error) {
+      return { ok: false, message: getApiError(error, 'Could not update user.') }
     }
-
-    const nextUsers = users.map((user) => (user.id === userId ? { ...user, status } : user))
-    syncUsers(nextUsers)
-    return { ok: true }
   }
 
-  function deleteUser(userId) {
+  async function updateUserStatus(userId, status) {
+    return updateUserByAdmin(userId, {
+      ...(users.find((user) => user.id === userId) ?? {}),
+      status,
+    })
+  }
+
+  async function deleteUser(userId) {
     if (!currentUser || currentUser.role !== 'admin') {
       return { ok: false, message: 'Admin access is required.' }
     }
 
-    if (userId === currentUser.id) {
-      return { ok: false, message: 'You cannot delete your own admin account.' }
+    try {
+      const user = await deleteUserRecord(userId)
+      if (user) {
+        setUsers((current) => mergeById(current, user))
+      } else {
+        setUsers((current) => current.filter((item) => item.id !== userId))
+      }
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, message: getApiError(error, 'Could not delete user.') }
     }
-
-    const targetUser = users.find((user) => user.id === userId)
-    if (!targetUser) return { ok: false, message: 'User not found.' }
-
-    const deletedUserIds = new Set(readJson(DELETED_USER_IDS_KEY, []))
-    deletedUserIds.add(normalizeUserId(userId))
-    saveJson(DELETED_USER_IDS_KEY, [...deletedUserIds])
-    const nextUsers = users.filter((user) => user.id !== userId)
-    const nextBookings = bookingRecords.map((booking) =>
-      booking.userId === userId
-        ? {
-            ...booking,
-            customerName: booking.customerName || targetUser.fullName,
-            deletedUserId: userId,
-            deletedUserEmail: targetUser.email,
-            status: booking.status === 'Completed' ? booking.status : 'Account removed',
-            userDeleted: true,
-            userId: null,
-          }
-        : booking,
-    )
-
-    syncUsers(nextUsers)
-    setBookingRecords(nextBookings)
-    saveJson(BOOKINGS_KEY, nextBookings)
-    return { ok: true }
   }
 
   const userBookings = useMemo(() => {
@@ -397,19 +286,23 @@ export function AuthProvider({ children }) {
 
   const value = {
     addBooking,
+    authLoading,
     bookingRecords,
     bookingStatusUpdates,
     changePassword,
     currentUser,
+    deleteUser,
     isAuthenticated: Boolean(currentUser),
+    loadBookings,
+    loadUsers,
     login,
     logout,
     register,
-    deleteUser,
+    updateBookingStatus,
+    updateProfile,
     updateUserByAdmin,
     updateUserStatus,
-    updateProfile,
-    updateBookingStatus,
+    uploadProfilePhoto,
     userBookings,
     users,
   }
