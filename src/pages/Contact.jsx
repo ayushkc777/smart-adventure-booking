@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Ambulance, HelpCircle, Mail, MapPin, Phone, Send, ShieldAlert } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
+import { FormStatus } from '../components/ui/FormStatus'
 import { SectionTitle } from '../components/ui/SectionTitle'
 import { getApiError } from '../api/axios'
 import { createSupportMessage } from '../api/supportApi'
@@ -200,20 +201,12 @@ export function Contact() {
               </label>
 
               {submittedReference ? (
-                <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                <FormStatus className="px-4 py-3">
                   Message received. Reference: {submittedReference}
-                </p>
+                </FormStatus>
               ) : null}
 
-              {submitError ? (
-                <p
-                  aria-live="polite"
-                  className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-800"
-                  role="alert"
-                >
-                  {submitError}
-                </p>
-              ) : null}
+              <FormStatus className="px-4 py-3" error>{submitError}</FormStatus>
 
               <Button disabled={!isFormValid || submitting} icon={Send} type="submit" variant="accent">
                 {submitting ? 'Sending...' : 'Send message'}

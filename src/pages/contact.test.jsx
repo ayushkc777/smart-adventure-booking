@@ -53,6 +53,7 @@ describe('Contact support form', () => {
     await user.click(screen.getByRole('button', { name: /send message/i }))
 
     expect(await screen.findByText(/reference: SUPPORT-100/i)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/message received/i)
     expect(createSupportMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         email: 'guest@example.com',

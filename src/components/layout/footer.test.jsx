@@ -32,6 +32,7 @@ describe('footer newsletter form', () => {
     finishSubmission({ ok: true })
     await waitFor(() => expect(submit).toBeEnabled())
     expect(input).toHaveValue('')
+    expect(screen.getByRole('status')).toHaveTextContent(/thanks for joining/i)
     expect(showToast).toHaveBeenCalledWith('Thanks for joining the adventure travel newsletter.')
   })
 
@@ -46,6 +47,7 @@ describe('footer newsletter form', () => {
     await user.click(screen.getByRole('button', { name: /subscribe/i }))
 
     await waitFor(() => expect(showToast).toHaveBeenCalledWith('Already subscribed.', 'info'))
+    expect(screen.getByRole('alert')).toHaveTextContent('Already subscribed.')
     expect(input).toHaveValue('guest@example.com')
   })
 })

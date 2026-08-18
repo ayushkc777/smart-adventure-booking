@@ -25,6 +25,7 @@ import { usePlatform } from '../context/usePlatform'
 import { operatorProfiles, safetyScore } from '../utils/adventureLogic'
 import { average, formatCurrency } from '../utils/formatters'
 import { subscribeNewsletter } from '../utils/newsletter'
+import { FormStatus } from '../components/ui/FormStatus'
 
 const testimonials = [
   {
@@ -65,6 +66,7 @@ export function Home() {
   const [query, setQuery] = useState('')
   const [location, setLocation] = useState('')
   const [newsletterSubmitting, setNewsletterSubmitting] = useState(false)
+  const [newsletterStatus, setNewsletterStatus] = useState({ error: false, message: '' })
   const featuredActivities = useMemo(
     () => [...activities].sort((a, b) => b.popularityScore - a.popularityScore).slice(0, 6),
     [activities],
@@ -106,14 +108,20 @@ export function Home() {
     if (newsletterSubmitting) return
     const formElement = event.currentTarget
     const email = new FormData(formElement).get('email')
+    setNewsletterStatus({ error: false, message: '' })
     setNewsletterSubmitting(true)
     const result = await subscribeNewsletter(email)
     setNewsletterSubmitting(false)
     if (!result.ok) {
+      setNewsletterStatus({ error: true, message: result.message })
       showToast(result.message, 'info')
       return
     }
     formElement.reset()
+    setNewsletterStatus({
+      error: false,
+      message: 'Thanks for joining the adventure travel newsletter.',
+    })
     showToast('Thanks for joining the adventure travel newsletter.')
   }
 
@@ -471,6 +479,9 @@ export function Home() {
               <Button disabled={newsletterSubmitting} type="submit" variant="accent">
                 {newsletterSubmitting ? 'Subscribing...' : 'Subscribe'}
               </Button>
+              <FormStatus className="md:col-span-2" error={newsletterStatus.error}>
+                {newsletterStatus.message}
+              </FormStatus>
             </form>
           </Card>
         </div>

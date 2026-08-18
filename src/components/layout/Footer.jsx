@@ -5,26 +5,34 @@ import { useAuth } from '../../context/useAuth'
 import { useExperience } from '../../context/useExperience'
 import { usePlatform } from '../../context/usePlatform'
 import { subscribeNewsletter } from '../../utils/newsletter'
+import { FormStatus } from '../ui/FormStatus'
 
 export function Footer() {
   const { currentUser, isAuthenticated } = useAuth()
   const { showToast } = useExperience()
   const { settings } = usePlatform()
   const [newsletterSubmitting, setNewsletterSubmitting] = useState(false)
+  const [newsletterStatus, setNewsletterStatus] = useState({ error: false, message: '' })
 
   async function handleNewsletter(event) {
     event.preventDefault()
     if (newsletterSubmitting) return
     const formElement = event.currentTarget
     const email = new FormData(formElement).get('email')
+    setNewsletterStatus({ error: false, message: '' })
     setNewsletterSubmitting(true)
     const result = await subscribeNewsletter(email)
     setNewsletterSubmitting(false)
     if (!result.ok) {
+      setNewsletterStatus({ error: true, message: result.message })
       showToast(result.message, 'info')
       return
     }
     formElement.reset()
+    setNewsletterStatus({
+      error: false,
+      message: 'Thanks for joining the adventure travel newsletter.',
+    })
     showToast('Thanks for joining the adventure travel newsletter.')
   }
 
@@ -122,6 +130,7 @@ export function Footer() {
                 <Send aria-hidden="true" size={16} />
                 {newsletterSubmitting ? 'Subscribing...' : 'Subscribe'}
               </button>
+              <FormStatus error={newsletterStatus.error}>{newsletterStatus.message}</FormStatus>
             </form>
           </div>
         </div>

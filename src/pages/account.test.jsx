@@ -102,6 +102,7 @@ describe('user dashboard and profile', () => {
     await tester.click(screen.getByRole('button', { name: /save profile/i }))
 
     expect(await screen.findByText(/profile updated successfully/i)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/profile updated successfully/i)
     expect(updateProfile).toHaveBeenCalledWith(
       expect.objectContaining({ fullName: 'Updated Traveler' }),
     )

@@ -3,6 +3,7 @@ import { Camera, Eye, EyeOff, Lock, Mail, Phone, Save, Trash2, Upload } from 'lu
 import { Avatar } from '../components/ui/Avatar'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
+import { FormStatus } from '../components/ui/FormStatus'
 import { SectionTitle } from '../components/ui/SectionTitle'
 import { useAuth } from '../context/useAuth'
 import { useExperience } from '../context/useExperience'
@@ -32,6 +33,8 @@ export function UserProfile() {
   const [passwordTouched, setPasswordTouched] = useState({})
   const [profileMessage, setProfileMessage] = useState('')
   const [passwordMessage, setPasswordMessage] = useState('')
+  const [profileMessageIsError, setProfileMessageIsError] = useState(false)
+  const [passwordMessageIsError, setPasswordMessageIsError] = useState(false)
   const [photoFile, setPhotoFile] = useState(null)
   const [profileSubmitting, setProfileSubmitting] = useState(false)
   const [passwordSubmitting, setPasswordSubmitting] = useState(false)
@@ -44,11 +47,13 @@ export function UserProfile() {
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
     setProfileMessage('')
+    setProfileMessageIsError(false)
   }
 
   function updatePasswordField(field, value) {
     setPasswordForm((current) => ({ ...current, [field]: value }))
     setPasswordMessage('')
+    setPasswordMessageIsError(false)
   }
 
   function validateProfile() {
@@ -107,6 +112,7 @@ export function UserProfile() {
     if (!PROFILE_PHOTO_TYPES.has(file.type)) {
       const message = 'Profile photos must be JPEG, PNG, or WebP images.'
       setProfileMessage(message)
+      setProfileMessageIsError(true)
       showToast(message, 'info')
       event.target.value = ''
       return
@@ -115,6 +121,7 @@ export function UserProfile() {
     if (file.size > MAX_PROFILE_PHOTO_BYTES) {
       const message = 'Profile photos must be 1 MB or smaller.'
       setProfileMessage(message)
+      setProfileMessageIsError(true)
       showToast(message, 'info')
       event.target.value = ''
       return
@@ -126,7 +133,10 @@ export function UserProfile() {
       updateField('profilePhoto', String(reader.result))
       showToast('Profile photo ready to save.', 'info')
     }
-    reader.onerror = () => setProfileMessage('Could not read the selected image.')
+    reader.onerror = () => {
+      setProfileMessage('Could not read the selected image.')
+      setProfileMessageIsError(true)
+    }
     reader.readAsDataURL(file)
   }
 
@@ -147,6 +157,7 @@ export function UserProfile() {
     if (!profileResult.ok) {
       setProfileSubmitting(false)
       setProfileMessage(profileResult.message)
+      setProfileMessageIsError(true)
       showToast(profileResult.message, 'info')
       return
     }
@@ -163,6 +174,7 @@ export function UserProfile() {
 
     const message = result.ok ? 'Profile updated successfully.' : result.message
     setProfileMessage(message)
+    setProfileMessageIsError(!result.ok)
     showToast(message, result.ok ? 'success' : 'info')
   }
 
@@ -181,6 +193,7 @@ export function UserProfile() {
     setPasswordSubmitting(false)
     if (!result.ok) {
       setPasswordMessage(result.message)
+      setPasswordMessageIsError(true)
       showToast(result.message, 'info')
       return
     }
@@ -188,6 +201,7 @@ export function UserProfile() {
     setPasswordForm({ confirmPassword: '', currentPassword: '', newPassword: '' })
     setPasswordTouched({})
     setPasswordMessage('Password changed successfully.')
+    setPasswordMessageIsError(false)
     showToast('Password changed successfully.')
   }
 
@@ -297,15 +311,7 @@ export function UserProfile() {
                   value={passwordForm.confirmPassword}
                 />
 
-                {passwordMessage ? (
-                  <p
-                    aria-live="polite"
-                    className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
-                    role="status"
-                  >
-                    {passwordMessage}
-                  </p>
-                ) : null}
+                <FormStatus error={passwordMessageIsError}>{passwordMessage}</FormStatus>
 
                 <Button disabled={!isPasswordValid || passwordSubmitting} icon={Save} type="submit" variant="accent">
                   {passwordSubmitting ? 'Updating...' : 'Update password'}
@@ -388,15 +394,7 @@ export function UserProfile() {
                 ) : null}
               </label>
 
-              {profileMessage ? (
-                <p
-                  aria-live="polite"
-                  className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
-                  role="status"
-                >
-                  {profileMessage}
-                </p>
-              ) : null}
+              <FormStatus error={profileMessageIsError}>{profileMessage}</FormStatus>
 
               <Button disabled={!isProfileValid || profileSubmitting} icon={Save} type="submit" variant="accent">
                 {profileSubmitting ? 'Saving...' : 'Save profile'}
