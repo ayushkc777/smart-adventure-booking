@@ -108,11 +108,67 @@ http://localhost:5173
 ## Available Scripts
 
 ```bash
-npm run dev      # Start Vite development server
-npm run lint     # Run oxlint
-npm run build    # Build production frontend
-npm run preview  # Preview the production build
+npm run dev           # Start Vite development server
+npm run lint          # Run oxlint
+npm run build         # Build production frontend
+npm run preview       # Preview the production build
+npm test              # Run Vitest (watch mode when attached to a terminal)
+npm run test:run      # Run the unit/component suite once
+npm run test:coverage # Run tests once and write a coverage report
+npm run test:e2e      # Run the Playwright browser workflows
 ```
+
+## Testing
+
+### Unit and component tests
+
+Unit and component tests use Vitest, Testing Library, and jsdom. For a deterministic local or CI
+run, use:
+
+```bash
+npm run test:run
+npm run lint
+npm run build
+```
+
+Coverage uses the V8 provider installed with the project:
+
+```bash
+npm run test:coverage
+```
+
+### End-to-end tests
+
+The Playwright configuration starts both projects automatically. Keep the repositories as sibling
+directories named `smart-adventure-booking` and `smart-adventure-api`, and run `npm install` in
+both before starting the suite. MongoDB must be available locally. You do not need to start either
+development server yourself.
+
+The suite is configured with Playwright's branded `chrome` channel, so Google Chrome must be
+installed and available to Playwright. If it is missing, install the channel with:
+
+```bash
+npx playwright install chrome
+```
+
+Run all public, traveler, and administrator browser workflows with:
+
+```bash
+npm run test:e2e
+```
+
+By default, Playwright starts the API on port `5050`, the frontend on port `5173`, and uses the
+isolated database `mongodb://127.0.0.1:27017/smart_adventure_e2e`. The suite resets and seeds its
+target database. To override it, provide `E2E_MONGO_URI` in the command environment:
+
+```bash
+E2E_MONGO_URI=mongodb://127.0.0.1:27017/smart_adventure_e2e_local npm run test:e2e
+```
+
+For safety, the database name in `E2E_MONGO_URI` must contain `test` or `e2e`; the suite refuses
+other names. This variable is read by `playwright.config.js` and is intentionally separate from the
+frontend `.env` file. Failed browser runs retain a trace and screenshot under `test-results/`, and
+the HTML report is written to `playwright-report/`.
 
 ## Build
 
