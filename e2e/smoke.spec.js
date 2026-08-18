@@ -96,6 +96,12 @@ test('visitor can browse, plan, compare, contact support, and subscribe', async 
   )
   expect(hasHorizontalOverflow).toBe(false)
   await page.screenshot({ fullPage: true, path: path.join(screenshotsDir, 'mobile-activities.png') })
+  await page.getByRole('link', { name: /^details$/i }).first().click()
+  await expect(page.getByRole('table', { name: /operator prices/i })).toBeVisible()
+  const detailHasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth + 2,
+  )
+  expect(detailHasHorizontalOverflow).toBe(false)
 })
 
 test('user can register, log in, save, book, view receipt, and update profile photo', async ({ page }) => {
