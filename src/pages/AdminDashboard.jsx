@@ -27,6 +27,7 @@ import { Link } from 'react-router-dom'
 import { Badge, RiskBadge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
+import { ConfirmationDialog } from '../components/ui/ConfirmationDialog'
 import { getAnalytics, getDashboardStats } from '../api/adminApi'
 import { useAuth } from '../context/useAuth'
 import { useExperience } from '../context/useExperience'
@@ -208,6 +209,7 @@ export function AdminDashboard({ section = 'dashboard' }) {
   const [adminStats, setAdminStats] = useState(null)
   const [adminAnalytics, setAdminAnalytics] = useState(null)
   const [notice, setNotice] = useState('')
+  const [confirmation, setConfirmation] = useState(null)
 
   useEffect(() => {
     setSettings(platformSettings)
@@ -366,15 +368,45 @@ export function AdminDashboard({ section = 'dashboard' }) {
       showToast(message, 'info')
       return
     }
-    if (!window.confirm('Delete this activity from the catalog?')) return
-    const result = await deleteActivity(activityId)
-    if (!result.ok) {
-      setNotice(result.message)
-      showToast(result.message, 'info')
-      return
-    }
-    setNotice('Activity removed successfully.')
-    showToast('Activity removed successfully.')
+    setConfirmation({
+      confirmLabel: 'Delete activity',
+      message: 'This permanently removes the activity from the public catalog.',
+      onConfirm: async () => {
+        const result = await deleteActivity(activityId)
+        if (!result.ok) {
+          setNotice(result.message)
+          showToast(result.message, 'info')
+          return
+        }
+        setNotice('Activity removed successfully.')
+        showToast('Activity removed successfully.')
+      },
+      title: 'Delete this activity?',
+    })
+  }
+
+  function handleDeleteReview(reviewId) {
+    setConfirmation({
+      confirmLabel: 'Delete review',
+      message: 'This permanently removes the traveler review and its ratings.',
+      onConfirm: async () => {
+        const result = await deleteReview(reviewId)
+        if (!result.ok) {
+          setNotice(result.message)
+          showToast(result.message, 'info')
+          return
+        }
+        setNotice('Review removed successfully.')
+        showToast('Review removed successfully.')
+      },
+      title: 'Delete this review?',
+    })
+  }
+
+  async function confirmPendingAction() {
+    const action = confirmation?.onConfirm
+    setConfirmation(null)
+    await action?.()
   }
 
   function updateReviewForm(field, value) {
@@ -535,13 +567,11 @@ export function AdminDashboard({ section = 'dashboard' }) {
       {section === 'reviews' ? (
         <ReviewsSection
           activities={activities}
-          deleteReview={deleteReview}
+          handleDeleteReview={handleDeleteReview}
           handleAddReview={handleAddReview}
           reviewForm={reviewForm}
           reviews={reviews}
           selectedReviewActivity={selectedReviewActivity}
-          setNotice={setNotice}
-          showToast={showToast}
           updateReviewForm={updateReviewForm}
         />
       ) : null}
@@ -578,6 +608,15 @@ export function AdminDashboard({ section = 'dashboard' }) {
           handleSaveSettings={handleSaveSettings}
           settings={settings}
           updateSettings={updateSettings}
+        />
+      ) : null}
+      {confirmation ? (
+        <ConfirmationDialog
+          confirmLabel={confirmation.confirmLabel}
+          message={confirmation.message}
+          onCancel={() => setConfirmation(null)}
+          onConfirm={confirmPendingAction}
+          title={confirmation.title}
         />
       ) : null}
     </div>
@@ -1404,13 +1443,11 @@ function BookingsSection({ allBookings, handleStatusChange }) {
 
 function ReviewsSection({
   activities,
-  deleteReview,
+  handleDeleteReview,
   handleAddReview,
   reviewForm,
   reviews,
   selectedReviewActivity,
-  setNotice,
-  showToast,
   updateReviewForm,
 }) {
   return (
@@ -1536,17 +1573,7 @@ function ReviewsSection({
                 <td className="px-5 py-4">
                   <Button
                     icon={Trash2}
-                    onClick={async () => {
-                      if (!window.confirm('Delete this review?')) return
-                      const result = await deleteReview(review.id)
-                      if (!result.ok) {
-                        setNotice(result.message)
-                        showToast(result.message, 'info')
-                        return
-                      }
-                      setNotice('Review removed successfully.')
-                      showToast('Review removed successfully.')
-                    }}
+                    onClick={() => handleDeleteReview(review.id)}
                     variant="secondary"
                   >
                     Delete

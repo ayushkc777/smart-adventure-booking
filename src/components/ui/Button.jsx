@@ -8,6 +8,8 @@ const variants = {
     'border border-slate-200 bg-white text-slate-950 shadow-sm hover:-translate-y-0.5 hover:border-himalaya-200 hover:bg-himalaya-50 hover:text-himalaya-900 focus-visible:outline-himalaya-700',
   accent:
     'bg-rhododendron-700 text-white shadow-[0_14px_32px_-20px_rgb(194_65_12)] hover:-translate-y-0.5 hover:bg-rhododendron-800 hover:shadow-[0_18px_34px_-22px_rgb(154_52_18)] focus-visible:outline-rhododendron-700',
+  danger:
+    'bg-red-700 text-white shadow-sm hover:-translate-y-0.5 hover:bg-red-800 focus-visible:outline-red-700',
   gold:
     'bg-gold-500 text-slate-950 shadow-sm hover:-translate-y-0.5 hover:bg-gold-400 focus-visible:outline-gold-500',
   ghost:

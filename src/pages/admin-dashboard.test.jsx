@@ -90,4 +90,40 @@ describe('AdminDashboard workflows', () => {
     )
     expect(showToast).toHaveBeenCalledWith('Settings saved successfully.')
   })
+
+  it('confirms activity deletion with an accessible dialog', async () => {
+    const tester = userEvent.setup()
+    const deleteActivity = vi.fn(async () => ({ ok: true }))
+    renderWithProviders(<AdminDashboard section="activities" />, {
+      auth: { bookingRecords: [], currentUser: admin },
+      platform: { deleteActivity },
+    })
+
+    await tester.click(screen.getAllByRole('button', { name: /^delete$/i })[0])
+    const dialog = screen.getByRole('alertdialog', { name: /delete this activity/i })
+    expect(dialog).toHaveAccessibleDescription(/permanently removes the activity/i)
+    expect(screen.getByRole('button', { name: /delete activity/i })).toHaveFocus()
+
+    await tester.click(screen.getByRole('button', { name: /cancel/i }))
+    expect(deleteActivity).not.toHaveBeenCalled()
+
+    await tester.click(screen.getAllByRole('button', { name: /^delete$/i })[0])
+    await tester.click(screen.getByRole('button', { name: /delete activity/i }))
+    await waitFor(() => expect(deleteActivity).toHaveBeenCalledOnce())
+  })
+
+  it('confirms review deletion without using a browser prompt', async () => {
+    const tester = userEvent.setup()
+    const deleteReview = vi.fn(async () => ({ ok: true }))
+    renderWithProviders(<AdminDashboard section="reviews" />, {
+      auth: { currentUser: admin },
+      platform: { deleteReview },
+    })
+
+    await tester.click(screen.getAllByRole('button', { name: /^delete$/i })[0])
+    expect(screen.getByRole('alertdialog', { name: /delete this review/i })).toBeInTheDocument()
+    await tester.click(screen.getByRole('button', { name: /delete review/i }))
+
+    await waitFor(() => expect(deleteReview).toHaveBeenCalledOnce())
+  })
 })
