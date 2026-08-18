@@ -78,7 +78,14 @@ export function Contact() {
 
     setSubmitting(true)
     try {
-      const message = await createSupportMessage(form)
+      const message = await createSupportMessage({
+        ...form,
+        email: form.email.trim().toLowerCase(),
+        fullName: form.fullName.trim(),
+        message: form.message.trim(),
+        phone: form.phone.trim(),
+        subject: form.subject.trim(),
+      })
       setSubmittedReference(message.id)
     } catch (error) {
       const message = getApiError(error, 'Could not send support message.')
