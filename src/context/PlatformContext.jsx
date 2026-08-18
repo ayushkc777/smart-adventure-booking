@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createActivity,
   deleteActivityRecord,
@@ -75,6 +75,7 @@ export function PlatformProvider({ children }) {
   const [reviews, setReviews] = useState([])
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [catalogError, setCatalogError] = useState('')
+  const catalogRequestIdRef = useRef(0)
   const [settings, setSettings] = useState(() => ({
     ...defaultPlatformSettings,
     ...readJson(SETTINGS_KEY, {}),
@@ -100,6 +101,8 @@ export function PlatformProvider({ children }) {
   }, [])
 
   const refreshCatalog = useCallback(async () => {
+    const requestId = catalogRequestIdRef.current + 1
+    catalogRequestIdRef.current = requestId
     setCatalogLoading(true)
     try {
       const [apiActivities, apiReviews, apiOperators] = await Promise.all([
@@ -107,6 +110,8 @@ export function PlatformProvider({ children }) {
         getReviews(),
         getOperators(),
       ])
+      if (requestId !== catalogRequestIdRef.current) return { ok: true, stale: true }
+
       setActivities(apiActivities.map((activity) => localizeActivity(activity)))
       setReviews(apiReviews)
       setOperators(apiOperators)
@@ -114,13 +119,16 @@ export function PlatformProvider({ children }) {
       return { ok: true }
     } catch (error) {
       const message = getApiError(error, 'Could not load live adventure catalogue.')
+      if (requestId !== catalogRequestIdRef.current) {
+        return { ok: false, message, stale: true }
+      }
       setActivities([])
       setReviews([])
       setOperators([])
       setCatalogError(message)
       return { ok: false, message }
     } finally {
-      setCatalogLoading(false)
+      if (requestId === catalogRequestIdRef.current) setCatalogLoading(false)
     }
   }, [])
 
