@@ -222,6 +222,9 @@ export function Booking() {
                   <label className="grid gap-2 text-sm font-bold text-slate-700">
                     Date
                     <input
+                      aria-describedby={errors.date ? 'booking-date-error' : undefined}
+                      aria-invalid={Boolean(errors.date)}
+                      aria-label="Date"
                       className="premium-input w-full"
                       min={todayDateString()}
                       onChange={(event) => updateField('date', event.target.value)}
@@ -230,7 +233,7 @@ export function Booking() {
                       value={booking.date}
                     />
                     {errors.date ? (
-                      <span className="text-sm text-red-700" role="alert">
+                      <span className="text-sm text-red-700" id="booking-date-error" role="alert">
                         {errors.date}
                       </span>
                     ) : null}
@@ -238,6 +241,9 @@ export function Booking() {
                   <label className="grid gap-2 text-sm font-bold text-slate-700">
                     Number of people
                     <input
+                      aria-describedby={errors.people ? 'booking-people-error' : undefined}
+                      aria-invalid={Boolean(errors.people)}
+                      aria-label="Number of people"
                       className="premium-input w-full"
                       min="1"
                       onChange={(event) => updateField('people', Number(event.target.value))}
@@ -246,7 +252,7 @@ export function Booking() {
                       value={booking.people}
                     />
                     {errors.people ? (
-                      <span className="text-sm text-red-700" role="alert">
+                      <span className="text-sm text-red-700" id="booking-people-error" role="alert">
                         {errors.people}
                       </span>
                     ) : null}
@@ -422,18 +428,24 @@ export function Booking() {
 }
 
 function BookingInput({ error, label, onChange, type = 'text', value }) {
+  const fieldId = `booking-${label.toLowerCase().replaceAll(' ', '-')}`
+  const errorId = `${fieldId}-error`
   return (
     <label className="grid gap-2 text-sm font-bold text-slate-700">
       {label}
       <input
+        aria-describedby={error ? errorId : undefined}
+        aria-invalid={Boolean(error)}
+        aria-label={label}
         className="premium-input w-full"
+        id={fieldId}
         onChange={(event) => onChange(event.target.value)}
         required
         type={type}
         value={value}
       />
       {error ? (
-        <span className="text-sm text-red-700" role="alert">
+        <span className="text-sm text-red-700" id={errorId} role="alert">
           {error}
         </span>
       ) : null}

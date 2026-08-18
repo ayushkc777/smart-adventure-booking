@@ -34,6 +34,13 @@ describe('authentication and protected routes', () => {
 
     expect(screen.getByText(/enter a valid email address/i)).toBeInTheDocument()
     expect(screen.getByText(/password must be at least 8 characters/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/email address/i)).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText(/email address/i)).toHaveAccessibleDescription(
+      'Enter a valid email address.',
+    )
+    expect(screen.getByLabelText(/^password$/i)).toHaveAccessibleDescription(
+      'Password must be at least 8 characters.',
+    )
 
     await tester.clear(screen.getByLabelText(/email address/i))
     await tester.type(screen.getByLabelText(/email address/i), 'user@example.com')

@@ -36,6 +36,10 @@ describe('Contact support form', () => {
     expect(screen.getByText(/please enter your full name/i)).toBeInTheDocument()
     expect(screen.getByText(/please enter a valid email/i)).toBeInTheDocument()
     expect(screen.getByText(/please enter a valid phone/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/full name/i)).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText(/^email$/i)).toHaveAccessibleDescription(
+      'Please enter a valid email address.',
+    )
     expect(createSupportMessage).not.toHaveBeenCalled()
   })
 

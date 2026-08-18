@@ -151,6 +151,9 @@ export function Contact() {
                 <label className="grid gap-2 text-sm font-bold text-slate-700">
                   Category
                   <select
+                    aria-describedby={touched.category && errors.category ? 'contact-category-error' : undefined}
+                    aria-invalid={Boolean(touched.category && errors.category)}
+                    aria-label="Category"
                     className="premium-select w-full"
                     onBlur={() => setTouched((current) => ({ ...current, category: true }))}
                     onChange={(event) => updateField('category', event.target.value)}
@@ -163,7 +166,7 @@ export function Contact() {
                     ))}
                   </select>
                   {touched.category && errors.category ? (
-                    <span className="text-sm text-red-700" role="alert">
+                    <span className="text-sm text-red-700" id="contact-category-error" role="alert">
                       {errors.category}
                     </span>
                   ) : null}
@@ -181,13 +184,16 @@ export function Contact() {
               <label className="grid gap-2 text-sm font-bold text-slate-700">
                 Message
                 <textarea
+                  aria-describedby={touched.message && errors.message ? 'contact-message-error' : undefined}
+                  aria-invalid={Boolean(touched.message && errors.message)}
+                  aria-label="Message"
                   className="min-h-36 rounded-xl border border-slate-200 bg-white px-3 py-3 text-slate-950 outline-none focus:border-himalaya-700 focus:ring-4 focus:ring-himalaya-100"
                   onBlur={() => setTouched((current) => ({ ...current, message: true }))}
                   onChange={(event) => updateField('message', event.target.value)}
                   value={form.message}
                 />
                 {touched.message && errors.message ? (
-                  <span className="text-sm text-red-700" role="alert">
+                  <span className="text-sm text-red-700" id="contact-message-error" role="alert">
                     {errors.message}
                   </span>
                 ) : null}
@@ -263,18 +269,24 @@ export function Contact() {
 }
 
 function ContactInput({ error, label, onBlur, onChange, type = 'text', value }) {
+  const fieldId = `contact-${label.toLowerCase().replaceAll(' ', '-')}`
+  const errorId = `${fieldId}-error`
   return (
     <label className="grid gap-2 text-sm font-bold text-slate-700">
       {label}
       <input
+        aria-describedby={error ? errorId : undefined}
+        aria-invalid={Boolean(error)}
+        aria-label={label}
         className="premium-input w-full"
+        id={fieldId}
         onBlur={onBlur}
         onChange={(event) => onChange(event.target.value)}
         type={type}
         value={value}
       />
       {error ? (
-        <span className="text-sm text-red-700" role="alert">
+        <span className="text-sm text-red-700" id={errorId} role="alert">
           {error}
         </span>
       ) : null}

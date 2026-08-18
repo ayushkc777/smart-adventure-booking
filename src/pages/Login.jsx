@@ -98,7 +98,11 @@ export function Login() {
             <label className="grid gap-2 text-sm font-bold text-slate-700">
               Email address
               <input
+                aria-describedby={touched.email && validationErrors.email ? 'login-email-error' : undefined}
+                aria-invalid={Boolean(touched.email && validationErrors.email)}
+                aria-label="Email address"
                 className="premium-input w-full"
+                id="login-email"
                 onChange={(event) => updateField('email', event.target.value)}
                 onBlur={() => setTouched((current) => ({ ...current, email: true }))}
                 required
@@ -106,7 +110,7 @@ export function Login() {
                 value={form.email}
               />
               {touched.email && validationErrors.email ? (
-                <span className="text-sm text-red-700" role="alert">
+                <span className="text-sm text-red-700" id="login-email-error" role="alert">
                   {validationErrors.email}
                 </span>
               ) : null}
@@ -116,6 +120,8 @@ export function Login() {
               Password
               <span className="relative">
                 <input
+                  aria-describedby={touched.password && validationErrors.password ? 'login-password-error' : undefined}
+                  aria-invalid={Boolean(touched.password && validationErrors.password)}
                   aria-label="Password"
                   className="premium-input w-full pr-11"
                   onBlur={() => setTouched((current) => ({ ...current, password: true }))}
@@ -134,7 +140,7 @@ export function Login() {
                 </button>
               </span>
               {touched.password && validationErrors.password ? (
-                <span className="text-sm text-red-700" role="alert">
+                  <span className="text-sm text-red-700" id="login-password-error" role="alert">
                   {validationErrors.password}
                 </span>
               ) : null}

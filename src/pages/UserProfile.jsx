@@ -367,6 +367,9 @@ export function UserProfile() {
               <label className="grid gap-2 text-sm font-bold text-slate-700">
                 Preferred language
                 <select
+                  aria-describedby={profileTouched.preferredLanguage && profileErrors.preferredLanguage ? 'profile-preferred-language-error' : undefined}
+                  aria-invalid={Boolean(profileTouched.preferredLanguage && profileErrors.preferredLanguage)}
+                  aria-label="Preferred language"
                   className="premium-select w-full"
                   onBlur={() => setProfileTouched((current) => ({ ...current, preferredLanguage: true }))}
                   onChange={(event) => updateField('preferredLanguage', event.target.value)}
@@ -379,7 +382,7 @@ export function UserProfile() {
                   ))}
                 </select>
                 {profileTouched.preferredLanguage && profileErrors.preferredLanguage ? (
-                  <span className="text-sm text-red-700" role="alert">
+                  <span className="text-sm text-red-700" id="profile-preferred-language-error" role="alert">
                     {profileErrors.preferredLanguage}
                   </span>
                 ) : null}
@@ -407,18 +410,24 @@ export function UserProfile() {
 }
 
 function ProfileInput({ error, label, onBlur, onChange, type = 'text', value }) {
+  const fieldId = `profile-${label.toLowerCase().replaceAll(' ', '-')}`
+  const errorId = `${fieldId}-error`
   return (
     <label className="grid gap-2 text-sm font-bold text-slate-700">
       {label}
       <input
+        aria-describedby={error ? errorId : undefined}
+        aria-invalid={Boolean(error)}
+        aria-label={label}
         className="premium-input w-full"
+        id={fieldId}
         onBlur={onBlur}
         onChange={(event) => onChange(event.target.value)}
         type={type}
         value={value}
       />
       {error ? (
-        <span className="text-sm text-red-700" role="alert">
+        <span className="text-sm text-red-700" id={errorId} role="alert">
           {error}
         </span>
       ) : null}
@@ -427,11 +436,15 @@ function ProfileInput({ error, label, onBlur, onChange, type = 'text', value }) 
 }
 
 function PasswordInput({ error, label, onBlur, onChange, onToggle, show, value }) {
+  const fieldId = `password-${label.toLowerCase().replaceAll(' ', '-')}`
+  const errorId = `${fieldId}-error`
   return (
     <label className="grid gap-2 text-sm font-bold text-slate-700">
       {label}
       <span className="relative">
         <input
+          aria-describedby={error ? errorId : undefined}
+          aria-invalid={Boolean(error)}
           aria-label={label}
           className="premium-input w-full pr-11"
           onBlur={onBlur}
@@ -449,7 +462,7 @@ function PasswordInput({ error, label, onBlur, onChange, onToggle, show, value }
         </button>
       </span>
       {error ? (
-        <span className="text-sm text-red-700" role="alert">
+        <span className="text-sm text-red-700" id={errorId} role="alert">
           {error}
         </span>
       ) : null}

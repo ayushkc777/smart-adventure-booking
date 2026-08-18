@@ -122,13 +122,16 @@ export function Register() {
             <label className="grid gap-2 text-sm font-bold text-slate-700">
               Full name
               <input
+                aria-describedby={(touched.fullName || errors.fullName) && validationErrors.fullName ? 'register-full-name-error' : undefined}
+                aria-invalid={Boolean((touched.fullName || errors.fullName) && validationErrors.fullName)}
+                aria-label="Full name"
                 className="premium-input w-full"
                 onBlur={() => setTouched((current) => ({ ...current, fullName: true }))}
                 onChange={(event) => updateField('fullName', event.target.value)}
                 value={form.fullName}
               />
               {(touched.fullName || errors.fullName) && validationErrors.fullName ? (
-                <span className="text-sm text-red-700" role="alert">
+                <span className="text-sm text-red-700" id="register-full-name-error" role="alert">
                   {validationErrors.fullName}
                 </span>
               ) : null}
@@ -138,6 +141,9 @@ export function Register() {
               <label className="grid gap-2 text-sm font-bold text-slate-700">
                 Email
                 <input
+                  aria-describedby={(touched.email || errors.email) && validationErrors.email ? 'register-email-error' : undefined}
+                  aria-invalid={Boolean((touched.email || errors.email) && validationErrors.email)}
+                  aria-label="Email"
                   className="premium-input w-full"
                   onBlur={() => setTouched((current) => ({ ...current, email: true }))}
                   onChange={(event) => updateField('email', event.target.value)}
@@ -145,7 +151,7 @@ export function Register() {
                   value={form.email}
                 />
                 {(touched.email || errors.email) && validationErrors.email ? (
-                  <span className="text-sm text-red-700" role="alert">
+                  <span className="text-sm text-red-700" id="register-email-error" role="alert">
                     {validationErrors.email}
                   </span>
                 ) : null}
@@ -154,6 +160,9 @@ export function Register() {
               <label className="grid gap-2 text-sm font-bold text-slate-700">
                 Phone
                 <input
+                  aria-describedby={(touched.phone || errors.phone) && validationErrors.phone ? 'register-phone-error' : undefined}
+                  aria-invalid={Boolean((touched.phone || errors.phone) && validationErrors.phone)}
+                  aria-label="Phone"
                   className="premium-input w-full"
                   onBlur={() => setTouched((current) => ({ ...current, phone: true }))}
                   onChange={(event) => updateField('phone', event.target.value)}
@@ -161,7 +170,7 @@ export function Register() {
                   value={form.phone}
                 />
                 {(touched.phone || errors.phone) && validationErrors.phone ? (
-                  <span className="text-sm text-red-700" role="alert">
+                  <span className="text-sm text-red-700" id="register-phone-error" role="alert">
                     {validationErrors.phone}
                   </span>
                 ) : null}
@@ -173,6 +182,8 @@ export function Register() {
                 Password
                 <span className="relative">
                   <input
+                    aria-describedby={(touched.password || errors.password) && validationErrors.password ? 'register-password-error' : undefined}
+                    aria-invalid={Boolean((touched.password || errors.password) && validationErrors.password)}
                     aria-label="Password"
                     className="premium-input w-full pr-11"
                     onBlur={() => setTouched((current) => ({ ...current, password: true }))}
@@ -190,7 +201,7 @@ export function Register() {
                   </button>
                 </span>
                 {(touched.password || errors.password) && validationErrors.password ? (
-                  <span className="text-sm text-red-700" role="alert">
+                  <span className="text-sm text-red-700" id="register-password-error" role="alert">
                     {validationErrors.password}
                   </span>
                 ) : null}
@@ -200,6 +211,8 @@ export function Register() {
                 Confirm password
                 <span className="relative">
                   <input
+                    aria-describedby={(touched.confirmPassword || errors.confirmPassword) && validationErrors.confirmPassword ? 'register-confirm-password-error' : undefined}
+                    aria-invalid={Boolean((touched.confirmPassword || errors.confirmPassword) && validationErrors.confirmPassword)}
                     aria-label="Confirm password"
                     className="premium-input w-full pr-11"
                     onBlur={() => setTouched((current) => ({ ...current, confirmPassword: true }))}
@@ -221,7 +234,7 @@ export function Register() {
                   </button>
                 </span>
                 {(touched.confirmPassword || errors.confirmPassword) && validationErrors.confirmPassword ? (
-                  <span className="text-sm text-red-700" role="alert">
+                  <span className="text-sm text-red-700" id="register-confirm-password-error" role="alert">
                     {validationErrors.confirmPassword}
                   </span>
                 ) : null}
