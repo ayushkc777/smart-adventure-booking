@@ -24,6 +24,52 @@ describe('catalogue, comparison, and booking pages', () => {
     expect(screen.queryByRole('heading', { name: /mardi himal helicopter tour/i })).not.toBeInTheDocument()
   })
 
+  it('applies combined URL filters and sorting on first render', () => {
+    renderWithProviders(<Activities />, {
+      initialEntries: [
+        '/activities?location=Pokhara&type=Paragliding&price=under-10000&rating=4.7&sort=rating',
+      ],
+    })
+
+    expect(screen.getByText(/showing 1 of 3 activities/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /paragliding over fewa lake/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/province or location/i)).toHaveValue('Pokhara')
+    expect(screen.getByLabelText(/sort by/i)).toHaveValue('rating')
+  })
+
+  it('expands mobile filters and resets query-backed controls', async () => {
+    const tester = userEvent.setup()
+    renderWithProviders(<Activities />, {
+      initialEntries: ['/activities?type=Mountain%20Biking&difficulty=Moderate'],
+    })
+
+    const toggle = screen.getByRole('button', { name: /show filters/i })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await tester.click(toggle)
+    expect(screen.getByRole('button', { name: /hide filters/i })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+    expect(screen.getByText(/showing 1 of 3 activities/i)).toBeInTheDocument()
+
+    await tester.click(screen.getByRole('button', { name: /reset filters/i }))
+    expect(screen.getByText(/showing 3 of 3 activities/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/activity type/i)).toHaveValue('')
+    expect(screen.getByLabelText(/difficulty/i)).toHaveValue('')
+  })
+
+  it('clears filters from the no-results recovery action', async () => {
+    const tester = userEvent.setup()
+    renderWithProviders(<Activities />, {
+      initialEntries: ['/activities?q=not-a-real-adventure'],
+    })
+
+    expect(screen.getByRole('heading', { name: /no activities found/i })).toBeInTheDocument()
+    await tester.click(screen.getByRole('button', { name: /clear filters/i }))
+    expect(screen.getByText(/showing 3 of 3 activities/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/keyword/i)).toHaveValue('')
+  })
+
   it('shows a clear API error instead of silently falling back to local data', () => {
     const refreshCatalog = vi.fn()
 
