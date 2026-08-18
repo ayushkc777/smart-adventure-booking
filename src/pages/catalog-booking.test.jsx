@@ -177,4 +177,45 @@ describe('catalogue, comparison, and booking pages', () => {
       people: 2,
     })
   })
+
+  it('updates booking totals for operator, traveler, and extra selections', async () => {
+    const tester = userEvent.setup()
+    const activity = {
+      ...activities[0],
+      operators: [
+        activities[0].operators[0],
+        {
+          ...activities[0].operators[0],
+          id: 'operator-premium',
+          name: 'Premium Sky Guides',
+          price: 12000,
+        },
+      ],
+    }
+
+    renderWithProviders(null, {
+      auth: { currentUser: user },
+      initialEntries: ['/booking/paragliding-pokhara?operator=operator-premium'],
+      platform: { getActivityById: vi.fn(() => activity) },
+      routes: [{ element: <Booking />, path: '/booking/:id' }],
+    })
+
+    expect(screen.getAllByText(/24,000/).length).toBeGreaterThan(0)
+    await tester.clear(screen.getByLabelText(/number of people/i))
+    await tester.type(screen.getByLabelText(/number of people/i), '1')
+    expect(screen.getAllByText(/12,000/).length).toBeGreaterThan(0)
+
+    await tester.click(screen.getByRole('button', { name: /continue/i }))
+    await tester.click(screen.getByRole('radio', { name: /pokhara sky adventures/i }))
+    expect(screen.getAllByText(/9,500/).length).toBeGreaterThan(0)
+
+    await tester.click(screen.getByRole('button', { name: /continue/i }))
+    await tester.type(screen.getByLabelText(/emergency contact name/i), 'Backup Contact')
+    await tester.type(screen.getByLabelText(/emergency phone/i), '9811111111')
+    await tester.click(screen.getByRole('button', { name: /continue/i }))
+    await tester.click(screen.getByRole('checkbox', { name: /photo and video package/i }))
+    await tester.click(screen.getByRole('checkbox', { name: /private hotel transfer/i }))
+
+    expect(screen.getAllByText(/10,500/).length).toBeGreaterThan(0)
+  })
 })
