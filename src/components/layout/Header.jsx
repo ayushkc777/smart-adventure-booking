@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { useExperience } from '../../context/useExperience'
+import { useDrawerFocus } from '../../hooks/useDrawerFocus'
 import { cn } from '../../utils/cn'
 import { Avatar } from '../ui/Avatar'
 import { Button } from '../ui/Button'
@@ -51,6 +52,7 @@ function navClass({ isActive }) {
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const { drawerRef, triggerRef } = useDrawerFocus(isOpen, setIsOpen)
   const profileButtonRef = useRef(null)
   const profileMenuRef = useRef(null)
   const { currentUser, isAuthenticated, logout } = useAuth()
@@ -170,10 +172,12 @@ export function Header() {
         </div>
 
         <button
+          aria-controls="mobile-navigation-drawer"
           aria-expanded={isOpen}
           aria-label="Toggle navigation"
           className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm lg:hidden"
           onClick={() => setIsOpen((value) => !value)}
+          ref={triggerRef}
           type="button"
         >
           {isOpen ? <X aria-hidden="true" size={20} /> : <Menu aria-hidden="true" size={20} />}
@@ -181,7 +185,14 @@ export function Header() {
       </div>
 
       {isOpen ? (
-        <div className="border-t border-slate-200 bg-white lg:hidden">
+        <div
+          aria-label="Mobile navigation"
+          aria-modal="true"
+          className="border-t border-slate-200 bg-white lg:hidden"
+          id="mobile-navigation-drawer"
+          ref={drawerRef}
+          role="dialog"
+        >
           <nav className="mx-auto grid max-w-7xl gap-2 px-4 py-4" aria-label="Mobile">
             {navItems.map((item) => (
               <NavLink

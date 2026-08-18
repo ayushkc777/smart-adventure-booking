@@ -15,6 +15,16 @@ describe('Header navigation', () => {
     await tester.click(toggle)
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('navigation', { name: /mobile/i })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: /mobile navigation/i })).toBeInTheDocument()
+    expect(document.body).toHaveStyle({ overflow: 'hidden' })
+    expect(screen.getByRole('navigation', { name: /mobile/i }).querySelector('a')).toHaveFocus()
+
+    await tester.keyboard('{Escape}')
+    expect(screen.queryByRole('navigation', { name: /mobile/i })).not.toBeInTheDocument()
+    expect(toggle).toHaveFocus()
+    expect(document.body).not.toHaveStyle({ overflow: 'hidden' })
+
+    await tester.click(toggle)
 
     await tester.click(screen.getByRole('navigation', { name: /mobile/i }).querySelector('a[href="/activities"]'))
     expect(screen.queryByRole('navigation', { name: /mobile/i })).not.toBeInTheDocument()

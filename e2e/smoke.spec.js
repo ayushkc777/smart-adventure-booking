@@ -85,7 +85,7 @@ test('visitor can browse, plan, compare, contact support, and subscribe', async 
   await page.goto('/')
   await page.getByRole('main').getByLabel(/newsletter email address/i).fill(`newsletter-${Date.now()}@example.com`)
   await page.getByRole('main').getByRole('button', { name: /subscribe/i }).click()
-  await expect(page.getByText(/thanks for joining/i)).toBeVisible()
+  await expect(page.getByRole('main').getByRole('status')).toHaveText(/thanks for joining/i)
   await page.screenshot({ fullPage: true, path: path.join(screenshotsDir, 'public-home.png') })
 
   await page.setViewportSize({ height: 844, width: 390 })

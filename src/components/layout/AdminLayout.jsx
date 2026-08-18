@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { useExperience } from '../../context/useExperience'
+import { useDrawerFocus } from '../../hooks/useDrawerFocus'
 import { cn } from '../../utils/cn'
 import { Avatar } from '../ui/Avatar'
 
@@ -59,6 +60,7 @@ function sidebarLinkClass({ isActive }) {
 
 export function AdminLayout() {
   const [isOpen, setIsOpen] = useState(false)
+  const { drawerRef, triggerRef } = useDrawerFocus(isOpen, setIsOpen)
   const { currentUser, logout } = useAuth()
   const { showToast } = useExperience()
   const location = useLocation()
@@ -136,14 +138,22 @@ export function AdminLayout() {
       <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:block lg:w-72">{sidebar}</div>
 
       {isOpen ? (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div
+          aria-label="Admin navigation"
+          aria-modal="true"
+          className="fixed inset-0 z-50 lg:hidden"
+          ref={drawerRef}
+          role="dialog"
+        >
           <button
             aria-label="Close admin menu overlay"
             className="absolute inset-0 bg-slate-950/50"
             onClick={() => setIsOpen(false)}
             type="button"
           />
-          <div className="relative h-full w-72 shadow-2xl">{sidebar}</div>
+          <div className="relative h-full w-72 shadow-2xl" id="admin-navigation-drawer">
+            {sidebar}
+          </div>
         </div>
       ) : null}
 
@@ -152,9 +162,12 @@ export function AdminLayout() {
           <div className="flex h-20 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
               <button
+                aria-controls="admin-navigation-drawer"
+                aria-expanded={isOpen}
                 aria-label="Open admin menu"
                 className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 lg:hidden"
                 onClick={() => setIsOpen(true)}
+                ref={triggerRef}
                 type="button"
               >
                 <Menu aria-hidden="true" size={20} />
