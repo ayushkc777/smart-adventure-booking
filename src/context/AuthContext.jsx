@@ -19,7 +19,13 @@ import {
   getUsers,
   updateUserRecord,
 } from '../api/adminApi'
-import { getApiError, SESSION_KEY, TOKEN_KEY, setAuthToken } from '../api/axios'
+import {
+  AUTH_EXPIRED_EVENT,
+  getApiError,
+  SESSION_KEY,
+  TOKEN_KEY,
+  setAuthToken,
+} from '../api/axios'
 import { AuthContext } from './authContext'
 
 function readSession() {
@@ -119,6 +125,18 @@ export function AuthProvider({ children }) {
       ignore = true
     }
   }, [loadBookings, loadUsers])
+
+  useEffect(() => {
+    function clearExpiredSession() {
+      setCurrentUser(null)
+      setBookingRecords([])
+      setUsers([])
+      saveSession(null)
+    }
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, clearExpiredSession)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, clearExpiredSession)
+  }, [])
 
   async function login(email, password) {
     try {

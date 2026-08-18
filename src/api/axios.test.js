@@ -1,5 +1,14 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { API_BASE_URL, SESSION_KEY, TOKEN_KEY, api, assetUrl, getApiError, setAuthToken } from './axios'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  API_BASE_URL,
+  AUTH_EXPIRED_EVENT,
+  SESSION_KEY,
+  TOKEN_KEY,
+  api,
+  assetUrl,
+  getApiError,
+  setAuthToken,
+} from './axios'
 
 describe('api helpers', () => {
   beforeEach(() => localStorage.clear())
@@ -42,5 +51,29 @@ describe('api helpers', () => {
     setAuthToken(null)
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
     expect(SESSION_KEY).toBe('smartAdventureSession')
+  })
+
+  it('clears cached sessions and announces authenticated 401 responses', async () => {
+    localStorage.setItem(TOKEN_KEY, 'expired-token')
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ id: 'user-1' }))
+    const expired = vi.fn()
+    window.addEventListener(AUTH_EXPIRED_EVENT, expired, { once: true })
+    const responseInterceptor = api.interceptors.response.handlers[0].rejected
+    const error = { response: { status: 401 } }
+
+    await expect(responseInterceptor(error)).rejects.toBe(error)
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+    expect(localStorage.getItem(SESSION_KEY)).toBeNull()
+    expect(expired).toHaveBeenCalledOnce()
+  })
+
+  it('does not expire sessions for other response statuses', async () => {
+    localStorage.setItem(TOKEN_KEY, 'valid-token')
+    const responseInterceptor = api.interceptors.response.handlers[0].rejected
+    const error = { response: { status: 403 } }
+
+    await expect(responseInterceptor(error)).rejects.toBe(error)
+    expect(localStorage.getItem(TOKEN_KEY)).toBe('valid-token')
   })
 })

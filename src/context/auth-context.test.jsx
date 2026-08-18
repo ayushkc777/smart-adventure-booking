@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from './AuthContext.jsx'
 import { useAuth } from './useAuth'
-import { SESSION_KEY, TOKEN_KEY } from '../api/axios'
+import { AUTH_EXPIRED_EVENT, SESSION_KEY, TOKEN_KEY } from '../api/axios'
 import { admin, user } from '../test/fixtures'
 
 const authApi = vi.hoisted(() => ({
@@ -87,5 +87,18 @@ describe('AuthProvider session restoration', () => {
     expect(screen.getByTestId('bookings')).toHaveTextContent('0')
     expect(screen.getByTestId('users')).toHaveTextContent('0')
     expect(JSON.parse(localStorage.getItem(SESSION_KEY))).toMatchObject(admin)
+  })
+
+  it('clears rendered authentication state when an active request expires', async () => {
+    localStorage.setItem(TOKEN_KEY, 'valid-token')
+    authApi.getCurrentUser.mockResolvedValue(user)
+    render(<AuthProvider><AuthState /></AuthProvider>)
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent(user.email))
+
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
+
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('signed-out'))
+    expect(screen.getByTestId('bookings')).toHaveTextContent('0')
+    expect(screen.getByTestId('users')).toHaveTextContent('0')
   })
 })
