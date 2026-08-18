@@ -10,6 +10,7 @@ import { isValidPhone, minimumPasswordLength } from '../utils/validation'
 
 const languages = ['English', 'Nepali', 'Hindi', 'Chinese', 'French', 'German', 'Spanish']
 const MAX_PROFILE_PHOTO_BYTES = 1024 * 1024
+const PROFILE_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 export function UserProfile() {
   const { changePassword, currentUser, updateProfile, uploadProfilePhoto } = useAuth()
@@ -103,8 +104,11 @@ export function UserProfile() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
-      setProfileMessage('Please upload an image file.')
+    if (!PROFILE_PHOTO_TYPES.has(file.type)) {
+      const message = 'Profile photos must be JPEG, PNG, or WebP images.'
+      setProfileMessage(message)
+      showToast(message, 'info')
+      event.target.value = ''
       return
     }
 
@@ -222,7 +226,12 @@ export function UserProfile() {
                 <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-rhododendron-700 px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-rhododendron-800">
                   <Upload aria-hidden="true" size={18} />
                   Upload photo
-                  <input accept="image/*" className="sr-only" onChange={handlePhotoChange} type="file" />
+                  <input
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={handlePhotoChange}
+                    type="file"
+                  />
                 </label>
                 <Button
                   disabled={!form.profilePhoto}

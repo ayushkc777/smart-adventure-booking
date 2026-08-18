@@ -54,6 +54,31 @@ describe('user dashboard and profile', () => {
     expect(showToast).toHaveBeenCalledWith('Profile photos must be 1 MB or smaller.', 'info')
   })
 
+  it('rejects unsupported profile photo types before reading the file', async () => {
+    const tester = userEvent.setup({ applyAccept: false })
+    const showToast = vi.fn()
+    const file = new File(['<svg></svg>'], 'profile.svg', { type: 'image/svg+xml' })
+    const { container } = renderWithProviders(<UserProfile />, {
+      auth: {
+        currentUser: {
+          ...user,
+          emergencyContact: '9811111111',
+          nationality: 'Nepali',
+          preferredLanguage: 'English',
+        },
+      },
+      experience: { showToast },
+    })
+
+    await tester.upload(container.querySelector('input[type="file"]'), file)
+
+    expect(screen.getByText(/must be jpeg, png, or webp images/i)).toBeInTheDocument()
+    expect(showToast).toHaveBeenCalledWith(
+      'Profile photos must be JPEG, PNG, or WebP images.',
+      'info',
+    )
+  })
+
   it('updates profile details and password through the account form', async () => {
     const tester = userEvent.setup()
     const updateProfile = vi.fn(async (updates) => ({ ok: true, user: { ...user, ...updates } }))
