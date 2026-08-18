@@ -1,11 +1,18 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { useLocation } from 'react-router-dom'
 import { ProtectedRoute } from '../components/auth/ProtectedRoute'
 import { admin, user } from '../test/fixtures'
 import { renderWithProviders } from '../test/test-utils'
 import { Login } from './Login'
 import { Register } from './Register'
+
+function LoginReturnPath() {
+  const location = useLocation()
+  const from = location.state?.from
+  return <output>{`${from?.pathname ?? ''}${from?.search ?? ''}`}</output>
+}
 
 describe('authentication and protected routes', () => {
   it('validates login fields and rejects invalid credentials clearly', async () => {
@@ -93,6 +100,64 @@ describe('authentication and protected routes', () => {
     })
 
     expect(screen.getByRole('heading', { name: /access denied/i })).toBeInTheDocument()
+  })
+
+  it('shows a session check while authentication is loading', () => {
+    renderWithProviders(null, {
+      auth: { authLoading: true },
+      initialEntries: ['/user/dashboard'],
+      routes: [
+        {
+          element: (
+            <ProtectedRoute allowedRoles={['user']}>
+              <h1>Traveler area</h1>
+            </ProtectedRoute>
+          ),
+          path: '/user/dashboard',
+        },
+      ],
+    })
+
+    expect(screen.getByRole('heading', { name: /checking your session/i })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /traveler area/i })).not.toBeInTheDocument()
+  })
+
+  it('allows every explicitly configured role', () => {
+    renderWithProviders(null, {
+      auth: { currentUser: admin },
+      initialEntries: ['/shared'],
+      routes: [
+        {
+          element: (
+            <ProtectedRoute allowedRoles={['user', 'admin']}>
+              <h1>Shared account area</h1>
+            </ProtectedRoute>
+          ),
+          path: '/shared',
+        },
+      ],
+    })
+
+    expect(screen.getByRole('heading', { name: /shared account area/i })).toBeInTheDocument()
+  })
+
+  it('preserves protected path queries when redirecting to login', () => {
+    renderWithProviders(null, {
+      initialEntries: ['/booking/activity-1?operator=operator-2'],
+      routes: [
+        {
+          element: (
+            <ProtectedRoute allowedRoles={['user']}>
+              <h1>Booking operator two</h1>
+            </ProtectedRoute>
+          ),
+          path: '/booking/activity-1',
+        },
+        { element: <LoginReturnPath />, path: '/login' },
+      ],
+    })
+
+    expect(screen.getByText('/booking/activity-1?operator=operator-2')).toBeInTheDocument()
   })
 
   it('validates registration and blocks duplicate email addresses', async () => {
