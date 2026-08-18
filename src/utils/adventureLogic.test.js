@@ -65,4 +65,48 @@ describe('adventure catalogue logic', () => {
     )
     expect(safetyScore(activities[0])).toBeGreaterThanOrEqual(90)
   })
+
+  it('treats catalogue filter boundaries as inclusive', () => {
+    const boundaryActivity = {
+      ...activities[0],
+      bestSeason: 'Autumn and Spring',
+      difficulty: 'Moderate to challenging',
+      durationDays: 5,
+      priceFrom: 30000,
+      rating: 4.7,
+    }
+
+    expect(
+      matchesActivityFilters(boundaryActivity, {
+        ...baseFilters,
+        difficulty: 'moderate',
+        duration: '2-5',
+        price: '10000-30000',
+        rating: '4.7',
+        season: 'spring',
+      }),
+    ).toBe(true)
+  })
+
+  it('falls back safely for unknown ranges and empty catalogues', () => {
+    expect(
+      matchesActivityFilters(activities[0], {
+        ...baseFilters,
+        duration: 'unknown-duration',
+        price: 'unknown-price',
+        rating: 'unknown-rating',
+      }),
+    ).toBe(true)
+    expect(sortActivities([], 'rating')).toEqual([])
+    expect(recommendActivities([], {})).toEqual([])
+    expect(operatorProfiles([])).toEqual([])
+  })
+
+  it('does not mutate catalogue order while sorting', () => {
+    const originalOrder = activities.map((activity) => activity.id)
+
+    sortActivities(activities, 'price-high')
+
+    expect(activities.map((activity) => activity.id)).toEqual(originalOrder)
+  })
 })
