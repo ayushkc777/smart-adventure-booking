@@ -113,6 +113,10 @@ describe('catalogue, comparison, and booking pages', () => {
 
     expect(screen.getByRole('table')).toHaveTextContent(/starting price/i)
     expect(screen.getByRole('table')).toHaveTextContent(/paragliding over fewa lake/i)
+    expect(screen.getByRole('region', { name: /mobile activity comparison/i })).toHaveTextContent(
+      /nagarkot mountain biking/i,
+    )
+    expect(screen.getAllByRole('article')).toHaveLength(2)
 
     await tester.click(screen.getByRole('button', { name: /clear comparison/i }))
     expect(clearCompare).toHaveBeenCalled()

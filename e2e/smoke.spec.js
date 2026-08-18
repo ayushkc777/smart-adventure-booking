@@ -102,6 +102,12 @@ test('visitor can browse, plan, compare, contact support, and subscribe', async 
     () => document.documentElement.scrollWidth > window.innerWidth + 2,
   )
   expect(detailHasHorizontalOverflow).toBe(false)
+  await page.goto('/compare')
+  await expect(page.getByRole('region', { name: /mobile activity comparison/i })).toBeVisible()
+  const compareHasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth + 2,
+  )
+  expect(compareHasHorizontalOverflow).toBe(false)
 })
 
 test('user can register, log in, save, book, view receipt, and update profile photo', async ({ page }) => {
