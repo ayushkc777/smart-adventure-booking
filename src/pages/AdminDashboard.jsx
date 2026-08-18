@@ -28,6 +28,7 @@ import { Badge, RiskBadge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { ConfirmationDialog } from '../components/ui/ConfirmationDialog'
+import { ResponsiveTable } from '../components/ui/ResponsiveTable'
 import { getAnalytics, getDashboardStats } from '../api/adminApi'
 import { useAuth } from '../context/useAuth'
 import { useExperience } from '../context/useExperience'
@@ -993,7 +994,7 @@ function OperatorsSection({
             </div>
           </form>
         ) : null}
-        <div className="overflow-x-auto">
+        <ResponsiveTable label="Operators">
           <table className="w-full min-w-[1180px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -1057,7 +1058,7 @@ function OperatorsSection({
               ))}
             </tbody>
           </table>
-        </div>
+        </ResponsiveTable>
       </Card>
 
       {editTarget ? (
@@ -1331,7 +1332,7 @@ function BookingsSection({ allBookings, handleStatusChange }) {
 
       <Card className="overflow-hidden">
         {filteredBookings.length ? (
-          <div className="overflow-x-auto">
+          <ResponsiveTable label="Bookings">
             <table className="w-full min-w-[1040px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -1394,7 +1395,7 @@ function BookingsSection({ allBookings, handleStatusChange }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
         ) : (
           <div className="p-8 text-center">
             <ClipboardList aria-hidden="true" className="mx-auto text-himalaya-800" size={42} />
@@ -1550,7 +1551,7 @@ function ReviewsSection({
           </Button>
         </div>
       </form>
-      <div className="overflow-x-auto">
+      <ResponsiveTable label="Reviews">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
@@ -1583,7 +1584,7 @@ function ReviewsSection({
             ))}
           </tbody>
         </table>
-      </div>
+      </ResponsiveTable>
     </Card>
   )
 }
@@ -1703,7 +1704,7 @@ function UsersSection({
 
       <Card className="overflow-hidden">
         {filteredUsers.length ? (
-          <div className="overflow-x-auto">
+          <ResponsiveTable label="Users">
             <table className="w-full min-w-[1040px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -1780,7 +1781,7 @@ function UsersSection({
                 })}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
         ) : (
           <div className="p-8 text-center">
             <Users aria-hidden="true" className="mx-auto text-himalaya-800" size={42} />
@@ -1974,7 +1975,7 @@ function SupportSection({ handleSupportStatus, supportMessages }) {
 
       <Card className="overflow-hidden">
         {filteredMessages.length ? (
-          <div className="overflow-x-auto">
+          <ResponsiveTable label="Support messages">
             <table className="w-full min-w-[1080px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -2033,7 +2034,7 @@ function SupportSection({ handleSupportStatus, supportMessages }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTable>
         ) : (
           <div className="p-8 text-center">
             <MessageSquareText aria-hidden="true" className="mx-auto text-himalaya-800" size={42} />

@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+@media (max-width: 639px) {
+  .admin-table-scroll th:first-child,
+  .admin-table-scroll td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    box-shadow: 1px 0 0 rgb(226 232 240);
+  }
+
+  .admin-table-scroll th:first-child {
+    background: rgb(248 250 252);
+  }
+
+  .admin-table-scroll td:first-child {
+    background: white;
+  }
+}
+
 @theme {
   --font-sans: Inter, ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
   --color-himalaya-50: #ecfdf9;

@@ -197,6 +197,22 @@ test('admin can access console sections and live support/bookings data', async (
   await page.getByRole('link', { name: 'Support Messages' }).click()
   await expect(page.getByText(/booking question/i)).toBeVisible()
 
+  await page.setViewportSize({ height: 844, width: 390 })
+  for (const [route, label] of [
+    ['/admin/operators', 'Operators'],
+    ['/admin/bookings', 'Bookings'],
+    ['/admin/reviews', 'Reviews'],
+    ['/admin/users', 'Users'],
+    ['/admin/support', 'Support messages'],
+  ]) {
+    await page.goto(route)
+    await expect(page.getByRole('region', { name: new RegExp(`${label} table`, 'i') })).toBeVisible()
+    const hasPageOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth + 2,
+    )
+    expect(hasPageOverflow).toBe(false)
+  }
+
   await page.locator('header').getByRole('button', { name: /logout/i }).click()
   await expect(page).toHaveURL('/')
 })
