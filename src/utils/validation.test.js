@@ -19,6 +19,11 @@ describe('validation utilities', () => {
   it('enforces the documented phone and password boundaries', () => {
     expect(isValidPhone('  1234567  ')).toBe(true)
     expect(isValidPhone('123456')).toBe(false)
+    expect(isValidPhone('+977 980-000-0000')).toBe(true)
+    expect(isValidPhone('(01) 555 1234')).toBe(true)
+    expect(isValidPhone('9800abc000')).toBe(false)
+    expect(isValidPhone('1234567890123456')).toBe(false)
+    expect(isValidPhone('')).toBe(false)
     expect(minimumPasswordLength).toBe(8)
   })
 

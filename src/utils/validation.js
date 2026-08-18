@@ -6,7 +6,10 @@ export function isValidEmail(email) {
 }
 
 export function isValidPhone(phone) {
-  return phone.trim().length >= 7
+  const value = String(phone).trim()
+  if (!/^\+?[\d\s().-]+$/.test(value)) return false
+  const digitCount = value.replace(/\D/g, '').length
+  return digitCount >= 7 && digitCount <= 15
 }
 
 export function todayDateString() {
