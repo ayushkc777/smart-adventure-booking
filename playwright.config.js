@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test'
+import { E2E_MONGO_URI } from './e2e/database.js'
 
 export default defineConfig({
   expect: {
@@ -24,7 +25,7 @@ export default defineConfig({
         ...process.env,
         VITE_API_URL: 'http://127.0.0.1:5050',
       },
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 120000,
       url: 'http://localhost:5173',
     },
@@ -33,9 +34,12 @@ export default defineConfig({
       cwd: '../smart-adventure-api',
       env: {
         ...process.env,
+        CLIENT_ORIGIN: 'http://localhost:5173',
+        MONGO_URI: E2E_MONGO_URI,
+        NODE_ENV: 'test',
         PORT: '5050',
       },
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 120000,
       url: 'http://127.0.0.1:5050/api/health',
     },

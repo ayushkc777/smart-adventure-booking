@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import { expect, test } from '@playwright/test'
+import { E2E_MONGO_URI } from './database.js'
 
 const execFileAsync = promisify(execFile)
 const backendDir = path.resolve(process.cwd(), '../smart-adventure-api')
@@ -20,7 +21,12 @@ async function seedDatabase() {
   delete env.NO_COLOR
   await execFileAsync('npm', ['run', 'seed'], {
     cwd: backendDir,
-    env: { ...env, PORT: '5050' },
+    env: {
+      ...env,
+      MONGO_URI: E2E_MONGO_URI,
+      NODE_ENV: 'test',
+      PORT: '5050',
+    },
   })
 }
 
