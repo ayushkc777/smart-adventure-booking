@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card'
 import { useAuth } from '../context/useAuth'
 import { useExperience } from '../context/useExperience'
 import { isValidEmail, minimumPasswordLength } from '../utils/validation'
+import { protectedReturnPath } from '../utils/navigation'
 
 export function Login() {
   const navigate = useNavigate()
@@ -24,9 +25,7 @@ export function Login() {
     const targetPath =
       currentUser.role === 'admin'
         ? '/admin'
-        : from
-          ? `${from.pathname}${from.search ?? ''}`
-          : fallbackPath
+        : protectedReturnPath(from, fallbackPath)
     return <Navigate replace to={targetPath} />
   }
 
@@ -68,9 +67,7 @@ export function Login() {
     const targetPath =
       result.user.role === 'admin'
         ? '/admin'
-        : from
-          ? `${from.pathname}${from.search ?? ''}`
-          : fallbackPath
+        : protectedReturnPath(from, fallbackPath)
     showToast('Signed in successfully.')
     navigate(targetPath, { replace: true })
   }

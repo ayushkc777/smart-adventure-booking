@@ -160,6 +160,21 @@ describe('authentication and protected routes', () => {
     expect(screen.getByText('/booking/activity-1?operator=operator-2')).toBeInTheDocument()
   })
 
+  it('rejects external login return state for authenticated users', () => {
+    renderWithProviders(null, {
+      auth: { currentUser: user },
+      initialEntries: [
+        { pathname: '/login', state: { from: 'https://malicious.example/phishing' } },
+      ],
+      routes: [
+        { element: <Login />, path: '/login' },
+        { element: <h1>Traveler dashboard</h1>, path: '/user/dashboard' },
+      ],
+    })
+
+    expect(screen.getByRole('heading', { name: /traveler dashboard/i })).toBeInTheDocument()
+  })
+
   it('validates registration and blocks duplicate email addresses', async () => {
     const tester = userEvent.setup()
     const register = vi.fn(async () => ({ ok: true, user }))
