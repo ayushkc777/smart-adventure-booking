@@ -60,6 +60,7 @@ test('visitor can browse, plan, compare, contact support, and subscribe', async 
   await page.getByLabel(/search activities/i).fill('Paragliding')
   await page.getByRole('button', { name: /^search$/i }).click()
   await expect(page).toHaveURL(/activities/)
+  await expect(page.getByRole('main')).toBeFocused()
   await expect(page.getByRole('heading', { name: /paragliding over fewa lake/i })).toBeVisible()
 
   await page.getByRole('button', { name: /add to comparison/i }).first().click()
